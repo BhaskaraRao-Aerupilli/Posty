@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}
+    <title>Home - Posty</title>
+{% endblock title %}
+{% block content %}
+<style>
+    .btn-outline-gold {
+        border: 2px solid var(--gold);
+        color: var(--gold);
+        background: transparent;
+        transition: 0.3s;
+    }
+    .btn-outline-gold:hover {
+        background: var(--gold);
+        color: #000;
+        box-shadow: 0 5px 20px rgba(212,175,55,0.6);
+        transform: translateY(-3px);
+    }
+</style>
+
+<!-- Hero Section -->
+<div class="container text-center" style="margin-top: 80px; margin-bottom: 80px;">
+    {% if request.user.is_authenticated %}
+        <h1>Welcome Back, {{ request.user.username }}!</h1>
+        <p class="lead mt-3 mb-5" style="color: var(--sand); font-size: 1.2rem;">Ready to share more of your journey with the world?</p>
+        <div class="d-flex justify-content-center gap-4">
+            <a href="{% url 'add-post' %}" class="btn btn-primary btn-lg px-4 py-2" style="font-size: 1.1rem;">Write a New Post</a>
+            <a href="{% url 'display-post' %}" class="btn btn-outline-gold btn-lg px-4 py-2" style="font-size: 1.1rem; border-radius: 6px;">Browse All Posts</a>
+        </div>
+    {% else %}
+        <h1>Share Your Thoughts With The World</h1>
+        <p class="lead mt-3 mb-5" style="color: var(--sand); font-size: 1.2rem;">Join our community and start creating beautiful posts today.</p>
+        <div class="d-flex justify-content-center gap-4">
+            <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-4 py-2" style="font-size: 1.1rem;">Log In</a>
+            <a href="{% url 'register' %}" class="btn btn-outline-gold btn-lg px-4 py-2" style="font-size: 1.1rem; border-radius: 6px;">Register</a>
+        </div>
+    {% endif %}
+</div>
+
+<hr>
+
+<!-- Recent Posts Section -->
+<div class="container" style="margin-top: 80px; margin-bottom: 100px;">
+    <h2 class="text-center mb-5" style="font-family: 'Cinzel', serif; color: var(--gold); font-size: 2.2rem;">Recent Posts</h2>
+    <div class="row row-cols-1 row-cols-md-3 g-5">
+        {% for post in posts %}
+        <div class="col">
+            <div class="card h-100 d-flex flex-column">
+                {% if post.image %}
+                <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}" style="height: 220px; object-fit: cover; border-top-left-radius: 10px; border-top-right-radius: 10px; border-bottom: 2px solid var(--gold-dark);">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center" style="height: 220px; background: #1b1b1b; border-top-left-radius: 10px; border-top-right-radius: 10px; border-bottom: 2px solid var(--gold-dark);">
+                    <span style="color: var(--desert); font-size: 1.1rem;">No Image</span>
+                </div>
+                {% endif %}
+                <div class="card-body d-flex flex-column" style="padding: 25px;">
+                    <h5 class="card-title">{{ post.title }}</h5>
+                    <p class="card-text mb-3" style="font-size: 0.9em; color: var(--gold-dark);">By <strong>{{ post.author.username }}</strong> &bull; {{ post.created_at|date:"M d, Y" }}</p>
+                    <p class="card-text flex-grow-1" style="color: var(--sand);">{{ post.content|truncatewords:20 }}</p>
+                    <a href="{% url 'read-post' post.id %}" class="btn btn-primary mt-4 py-2">Read More</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center mt-4">
+            <p style="color: var(--desert); font-size: 1.2rem; font-style: italic;">No posts have been published yet. Be the first!</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock content %}

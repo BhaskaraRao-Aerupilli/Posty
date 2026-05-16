@@ -1,0 +1,24 @@
+# Python/Django
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+db.sqlite3
+
+# Media files
+media/
+
+# Virtual environment
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables
+.env
+
+# IDEs
+.vscode/
+.idea/

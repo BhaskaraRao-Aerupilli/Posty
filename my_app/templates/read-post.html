@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}
+    <title>Read Post</title>
+{% endblock title %}
+{% block content %}
+    <h1>Read Post</h1>
+    <hr>
+    <div class="card" style="width: 40rem; margin: 10px auto;">
+  <img src="{{ post.image.url }}" class="card-img-top" alt="image">
+  <div class="card-body">
+<h5 class="card-title">{{ post.title }}</h5>
+    <p class="card-text">{{ post.content | linebreaks }}</p>
+    <p class="card-text">{{ post.subtitle | linebreaks }}</p>
+    <p class="card-text">Author: {{ post.author }}</p>
+    <p class="card-text">Created at: {{ post.created_at }}</p>
+    <p class="card-text">Updated at: {{ post.updated_at }}</p>
+    <a href="{% url 'display-post' %}" class="btn btn-primary">Go Back</a>
+    {% if request.user == post.author %}
+    <a href="{% url 'update-post' post.id %}" class="btn btn-primary">Update</a>
+    <a href="{% url 'delete-post' post.id %}" class="btn btn-danger">Delete</a>
+    {% endif %}
+  </div>
+</div>
+    {% endblock content %}

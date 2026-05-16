@@ -1,0 +1,342 @@
+/* ============================= */
+/*        PHARAOH UI THEME       */
+/* ============================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Marcellus&display=swap');
+
+/* ============================= */
+/* VARIABLES */
+/* ============================= */
+
+:root{
+--gold:#d4af37;
+--gold-dark:#b8962e;
+--sand:#f5e6c8;
+--desert:#e9d8a6;
+--lapis:#1a2a6c;
+--turquoise:#00b4d8;
+--obsidian:#0f0f0f;
+--danger:#c1121f;
+}
+
+/* ============================= */
+/* RESET */
+/* ============================= */
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Marcellus',serif;
+}
+
+/* ============================= */
+/* BODY */
+/* ============================= */
+
+body{
+background:linear-gradient(135deg,#0f0f0f,#1a2a6c,#000);
+background-size:400% 400%;
+min-height:100vh;
+color:var(--sand);
+animation:desertNight 18s ease infinite;
+overflow-x:hidden;
+}
+
+@keyframes desertNight{
+0%{background-position:0% 50%;}
+50%{background-position:100% 50%;}
+100%{background-position:0% 50%;}
+}
+
+/* Sun glow */
+
+body::before{
+content:"";
+position:fixed;
+top:-150px;
+right:-150px;
+width:600px;
+height:600px;
+background:radial-gradient(circle,var(--gold),transparent 70%);
+opacity:0.25;
+animation:sunPulse 12s infinite;
+pointer-events:none;
+}
+
+@keyframes sunPulse{
+0%{transform:scale(1);}
+50%{transform:scale(1.3);}
+100%{transform:scale(1);}
+}
+
+/* ============================= */
+/* HEADINGS */
+/* ============================= */
+
+h1{
+text-align:center;
+margin-top:40px;
+font-family:'Cinzel',serif;
+font-size:2.6em;
+letter-spacing:3px;
+color:var(--gold);
+text-shadow:0 0 15px rgba(212,175,55,0.6);
+}
+
+hr{
+width:240px;
+margin:15px auto 30px auto;
+border:none;
+height:3px;
+background:linear-gradient(90deg,transparent,var(--gold),transparent);
+}
+
+/* ============================= */
+/* NAVBAR */
+/* ============================= */
+
+.navbar{
+padding:14px 40px;
+background:linear-gradient(90deg,#000,#1a2a6c);
+border-bottom:2px solid var(--gold);
+box-shadow:0 0 20px rgba(212,175,55,0.4);
+}
+
+.navbar-nav .nav-link{
+color:var(--sand) !important;
+font-weight:600;
+margin-left:16px;
+position:relative;
+transition:0.3s;
+}
+
+.navbar-nav .nav-link:hover{
+color:var(--gold) !important;
+}
+
+.navbar-nav .nav-link::after{
+content:"";
+position:absolute;
+bottom:-5px;
+left:0;
+width:0;
+height:2px;
+background:var(--gold);
+transition:0.3s;
+}
+
+.navbar-nav .nav-link:hover::after{
+width:100%;
+}
+
+.nav-link.active{
+color:var(--gold) !important;
+}
+
+/* ============================= */
+/* FORM */
+/* ============================= */
+
+form{
+width:420px;
+margin:60px auto;
+background:rgba(0,0,0,0.92);
+padding:45px;
+border-radius:14px;
+border:2px solid var(--gold);
+box-shadow:0 0 25px rgba(212,175,55,0.5),0 0 70px rgba(212,175,55,0.2);
+}
+
+form label{
+display:block;
+margin-top:15px;
+font-weight:600;
+color:var(--gold);
+}
+
+/* Inputs */
+
+form input{
+width:100%;
+padding:12px;
+margin-top:8px;
+margin-bottom:15px;
+border-radius:6px;
+border:2px solid var(--gold-dark);
+background:#1b1b1b;
+color:var(--sand);
+font-size:0.95em;
+}
+
+form input::placeholder{
+color:var(--desert);
+}
+
+form input:focus{
+outline:none;
+border-color:var(--turquoise);
+box-shadow:0 0 10px var(--turquoise);
+}
+
+/* ============================= */
+/* TEXTAREA */
+/* ============================= */
+
+textarea{
+width:100%;
+padding:14px;
+margin-bottom:20px;
+border-radius:8px;
+border:2px solid var(--gold-dark);
+background:#1b1b1b;
+color:var(--sand);
+font-size:0.95em;
+resize:vertical;
+min-height:180px;
+}
+
+textarea:focus{
+outline:none;
+border-color:var(--turquoise);
+box-shadow:0 0 10px var(--turquoise);
+}
+
+/* ============================= */
+/* FILE INPUT */
+/* ============================= */
+
+input[type="file"]{
+width:100%;
+padding:10px;
+background:#1b1b1b;
+color:var(--sand);
+border:2px solid var(--gold-dark);
+border-radius:6px;
+margin-bottom:15px;
+}
+
+input[type="file"]::file-selector-button{
+background:linear-gradient(45deg,#b8962e,#d4af37);
+border:none;
+padding:8px 14px;
+margin-right:10px;
+border-radius:4px;
+cursor:pointer;
+font-weight:600;
+}
+
+/* ============================= */
+/* BUTTONS */
+/* ============================= */
+
+.btn{
+border-radius:6px;
+padding:10px 24px;
+font-weight:600;
+cursor:pointer;
+transition:0.3s;
+}
+
+.btn-primary{
+background:linear-gradient(45deg,#b8962e,#d4af37,#fff3b0);
+color:black;
+border:none;
+box-shadow:0 5px 20px rgba(212,175,55,0.6);
+}
+
+.btn-primary:hover{
+transform:translateY(-3px);
+box-shadow:0 10px 25px rgba(212,175,55,0.8);
+}
+
+/* Delete button redesign */
+
+.btn-danger{
+background:linear-gradient(45deg,#7a0f15,#c1121f);
+color:white;
+border:none;
+box-shadow:0 5px 15px rgba(193,18,31,0.4);
+}
+
+.btn-danger:hover{
+background:linear-gradient(45deg,#c1121f,#ff4d4d);
+transform:translateY(-2px);
+box-shadow:0 8px 20px rgba(193,18,31,0.6);
+}
+
+/* Button spacing */
+
+.card .btn{
+width:100%;
+margin-top:10px;
+}
+
+/* ============================= */
+/* CARDS */
+/* ============================= */
+
+.card{
+background:rgba(0,0,0,0.9);
+border:2px solid var(--gold);
+border-radius:12px;
+box-shadow:0 0 20px rgba(212,175,55,0.3);
+transition:0.3s;
+}
+
+.card:hover{
+transform:translateY(-10px);
+box-shadow:0 0 40px rgba(212,175,55,0.7);
+}
+
+.card-title{
+color:var(--gold);
+font-family:'Cinzel',serif;
+font-size:1.3em;
+margin-bottom:10px;
+}
+
+.card-text,
+.card-body p{
+color:var(--sand);
+line-height:1.6;
+}
+
+/* ============================= */
+/* FOOTER */
+/* ============================= */
+
+footer{
+margin-top:80px;
+padding:35px;
+text-align:center;
+background:#000;
+border-top:2px solid var(--gold);
+color:var(--sand);
+}
+
+footer a{
+color:var(--gold);
+text-decoration:none;
+}
+
+/* ============================= */
+/* RESPONSIVE */
+/* ============================= */
+
+@media(max-width:768px){
+
+form{
+width:90%;
+padding:30px;
+}
+
+h1{
+font-size:2em;
+}
+
+.navbar{
+padding:12px 20px;
+}
+
+}

@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}
+<title>Login</title>
+{% endblock title %}
+{% block content %}
+   <h1>LOGIN PAGE</h1>
+   <hr>
+   <form method="post">
+    {% csrf_token %}
+    <label for="username">username</label>
+    <input type="text" name="username" id="username"><br>
+    <label for="password" >password</label>
+    <input type="password" name="password" id="password"><br>
+    <button class="btn btn-success" type="submit">Login</button>
+   </form>
+   {% if error %}
+   <p style="color: red;">{{ error }}</p>
+   {% endif %}
+{% endblock content %}
