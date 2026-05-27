@@ -29,6 +29,19 @@
    gunicorn myproject.wsgi --bind 0.0.0.0:8000
    ```
 
+## Deploying to Render
+
+1. Connect your GitHub repo to Render and select the `main` branch.
+2. Render will detect `render.yaml` and configure the web service.
+3. Confirm the service settings:
+   - Build command: `pip install -r requirements.txt`
+   - Start command: `gunicorn myproject.wsgi --bind 0.0.0.0:$PORT`
+4. Ensure Render environment variables are set:
+   - `DJANGO_DEBUG=False`
+   - `DJANGO_ALLOWED_HOSTS=*`
+   - `DJANGO_SECRET_KEY` is generated automatically by Render if configured via `render.yaml`
+5. Deploy the service from the Render dashboard.
+
 ## Deploying to Heroku
 
 1. Create a Heroku app:
