@@ -36,6 +36,7 @@
 3. Confirm the service settings:
    - Build command: `pip install -r requirements.txt`
    - Start command: `gunicorn myproject.wsgi --bind 0.0.0.0:$PORT`
+   - Note: startup now runs `python manage.py migrate` before starting the app.
 4. Ensure Render environment variables are set:
    - `DJANGO_DEBUG=False`
    - `DJANGO_ALLOWED_HOSTS=*`
