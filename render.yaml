@@ -3,8 +3,11 @@ services:
     name: Posty
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
     startCommand: gunicorn myproject.wsgi --bind 0.0.0.0:$PORT
+    postDeployCommand: python manage.py migrate
     envVars:
       - key: DJANGO_SECRET_KEY
         generate: secret
