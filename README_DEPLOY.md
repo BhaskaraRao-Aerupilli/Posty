@@ -43,6 +43,18 @@
    - `DJANGO_SECRET_KEY` is generated automatically by Render if configured via `render.yaml`
 5. Deploy the service from the Render dashboard.
 
+### GitHub Actions auto-deploy (optional)
+
+This repository includes a workflow that can trigger a Render deploy via the Render API. To enable it:
+
+1. In your GitHub repo settings, add the following **Repository secrets**:
+   - `RENDER_API_KEY` — your Render API key (from Render dashboard -> Account -> API Keys)
+   - `RENDER_SERVICE_ID` — the Render service ID (from the service URL or service settings)
+
+2. After adding these secrets, a push to `main` will automatically call the Render API and trigger a deploy. You can also manually trigger the workflow from the Actions tab.
+
+Example: find the service id in the Render dashboard URL (it appears as a long alphanumeric id in the service settings). If you prefer, trigger deploys manually from Render instead of using this workflow.
+
 ## Deploying to Heroku
 
 1. Create a Heroku app:
