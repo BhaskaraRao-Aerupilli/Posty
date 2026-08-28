@@ -373,11 +373,19 @@ def edit_profile_view(request):
     if request.method == 'POST':
         form = ProfileForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
-            form.save()
+            p = form.save(commit=False)
+            # If user uploaded a new local file, clear avatar_url
+            if request.FILES.get('avatar'):
+                p.avatar_url = ''
+            elif p.avatar_url:
+                # User set/generated a new avatar_url
+                p.avatar = None
+            p.save()
             return redirect('author-profile', username=request.user.username)
     else:
         form = ProfileForm(instance=profile)
     return render(request, 'edit-profile.html', {'form': form, 'profile': profile})
+
 
 
 

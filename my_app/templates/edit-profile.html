@@ -91,9 +91,11 @@
             });
             const data = await res.json();
             if (data.success && data.data && data.data.url) {
-                document.getElementById('id_avatar_url').value = data.data.url;
+                const avatarUrlField = document.getElementById('id_avatar_url');
+                if (avatarUrlField) avatarUrlField.value = data.data.url;
+                if (avatarFileInput) avatarFileInput.value = '';
                 document.getElementById('avatarPreviewImg').src = data.data.thumb || data.data.url;
-                showToast('✨ AI Avatar generated and attached!', 'success');
+                showToast('✨ AI Avatar generated and attached! Click "Save Changes" to apply.', 'success');
             } else {
                 showToast('Failed to generate avatar: ' + (data.error || 'Unknown'), 'error');
             }
@@ -102,4 +104,5 @@
         }
     }
     </script>
+
 {% endblock content %}

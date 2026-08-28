@@ -75,14 +75,15 @@ class Profile(models.Model):
 
     @property
     def get_avatar(self):
+        if self.avatar_url:
+            return self.avatar_url
         if self.avatar:
             try:
                 return self.avatar.url
             except Exception:
                 pass
-        if self.avatar_url:
-            return self.avatar_url
         return f"https://ui-avatars.com/api/?name={self.user.username}&background=d4af37&color=000000&bold=true"
+
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
