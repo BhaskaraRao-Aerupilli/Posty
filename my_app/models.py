@@ -39,7 +39,8 @@ class Post(models.Model):
                 pass
         if self.image_url:
             return self.image_url
-        return '/static/images/logo.png'
+        return ''
+
 
     @property
     def total_likes(self):

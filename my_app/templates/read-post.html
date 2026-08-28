@@ -19,12 +19,12 @@
     <hr>
     
     <div style="max-width: 50rem; margin: 10px auto 60px auto; padding: 0 15px;">
-        <!-- Main Post Card -->
-        <div class="card mb-4">
+        <div class="card mb-4" style="overflow: hidden;">
             {% if post.get_image_url %}
-            <img src="{{ post.get_image_url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 420px; object-fit: cover;">
+            <img src="{{ post.get_image_url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 440px; width: 100%; object-fit: cover;" onerror="this.style.display='none';">
             {% endif %}
             <div class="card-body p-4">
+
                 
                 <!-- Category, Author & Stats Bar -->
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
