@@ -11,6 +11,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
 
 
+
 def _call_groq(prompt: str, system_message: str = "You are Posty AI, a helpful blogging assistant.", json_mode: bool = False) -> str:
     """Call Groq / Grok API."""
     if not GROQ_API_KEY:
@@ -22,10 +23,12 @@ def _call_groq(prompt: str, system_message: str = "You are Posty AI, a helpful b
         "Authorization": f"Bearer {GROQ_API_KEY}"
     }
     
-    models = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile"]
+    models = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b", "groq/compound-mini", "qwen/qwen3.6-27b"]
     
     for model in models:
         try:
+
+
             payload = {
                 "model": model,
                 "messages": [
