@@ -1,24 +1,622 @@
 {% extends 'base.html' %}
 {% block title %}
-    <title>Read Post</title>
+    <title>{{ post.title }} - Posty</title>
 {% endblock title %}
+
+{% block meta_tags %}
+<meta property="og:title" content="{{ post.title }} | Posty">
+<meta property="og:description" content="{{ post.subtitle }}">
+<meta property="og:image" content="{{ post.get_image_url }}">
+<meta property="og:type" content="article">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ post.title }}">
+<meta name="twitter:description" content="{{ post.subtitle }}">
+<meta name="twitter:image" content="{{ post.get_image_url }}">
+{% endblock meta_tags %}
+
 {% block content %}
     <h1>Read Post</h1>
     <hr>
-    <div class="card" style="width: 40rem; margin: 10px auto;">
-  <img src="{{ post.image.url }}" class="card-img-top" alt="image">
-  <div class="card-body">
-<h5 class="card-title">{{ post.title }}</h5>
-    <p class="card-text">{{ post.content | linebreaks }}</p>
-    <p class="card-text">{{ post.subtitle | linebreaks }}</p>
-    <p class="card-text">Author: {{ post.author }}</p>
-    <p class="card-text">Created at: {{ post.created_at }}</p>
-    <p class="card-text">Updated at: {{ post.updated_at }}</p>
-    <a href="{% url 'display-post' %}" class="btn btn-primary">Go Back</a>
-    {% if request.user == post.author %}
-    <a href="{% url 'update-post' post.id %}" class="btn btn-primary">Update</a>
-    <a href="{% url 'delete-post' post.id %}" class="btn btn-danger">Delete</a>
-    {% endif %}
-  </div>
-</div>
-    {% endblock content %}
+    
+    <div style="max-width: 50rem; margin: 10px auto 60px auto; padding: 0 15px;">
+        <!-- Main Post Card -->
+        <div class="card mb-4">
+            {% if post.get_image_url %}
+            <img src="{{ post.get_image_url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 420px; object-fit: cover;">
+            {% endif %}
+            <div class="card-body p-4">
+                
+                <!-- Category, Author & Stats Bar -->
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge" style="background: rgba(212,175,55,0.2); border: 1px solid var(--gold); color: var(--gold); padding: 5px 12px; font-size: 0.85rem;">
+                            <i class="bi bi-tag-fill me-1"></i> {{ post.category }}
+                        </span>
+                        <a href="{% url 'author-profile' post.author.username %}" class="d-flex align-items-center text-decoration-none" style="color: var(--sand);">
+                            <img src="{{ post.author.profile.get_avatar }}" alt="{{ post.author.username }}" width="28" height="28" class="rounded-circle me-1" style="border: 1px solid var(--gold); object-fit: cover;">
+                            <span style="font-weight: bold; color: var(--sand); font-size: 0.92rem;">{{ post.author.username }}</span>
+                        </a>
+                    </div>
+                    <div class="d-flex align-items-center gap-3" style="font-size: 0.85rem; color: var(--desert);">
+                        <span><i class="bi bi-eye me-1"></i> {{ post.views_count }} views</span>
+                        <span><i class="bi bi-calendar3 me-1"></i> {{ post.created_at|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+
+                <h1 id="postTitleHeading" class="card-title text-start mt-2 mb-3" style="font-size: 2.1rem; line-height: 1.3;">{{ post.title }}</h1>
+                <h5 id="postSubtitleHeading" class="mb-4" style="color: var(--turquoise); font-style: italic; font-size: 1.15rem; line-height: 1.6;">{{ post.subtitle }}</h5>
+
+                <!-- 🛠️ Reader Toolbar: Translation, Font Controls & Export -->
+                <div class="p-2 px-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2" 
+                     style="background: rgba(15,15,15,0.7); border: 1px dashed rgba(212,175,55,0.4); border-radius: 8px;">
+                    <!-- 🌍 Translation Dropdown -->
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size: 0.85rem; color: var(--gold);"><i class="bi bi-translate text-warning me-1"></i> Translate:</span>
+                        <select id="selectTranslateLang" class="form-select form-select-sm m-0" style="width: auto; padding: 2px 24px 2px 8px; font-size: 0.8rem; background: #181818; color: var(--sand); border: 1px solid var(--gold-dark);" onchange="translateArticle(this.value)">
+                            <option value="">Select Language...</option>
+                            <option value="Spanish">Spanish (Español)</option>
+                            <option value="French">French (Français)</option>
+                            <option value="German">German (Deutsch)</option>
+                            <option value="Hindi">Hindi (हिंदी)</option>
+                            <option value="Telugu">Telugu (తెలుగు)</option>
+                            <option value="Tamil">Tamil (தமிழ்)</option>
+                            <option value="Japanese">Japanese (日本語)</option>
+                            <option value="Arabic">Arabic (العربية)</option>
+                            <option value="Mandarin">Mandarin (中文)</option>
+                            <option value="Italian">Italian (Italiano)</option>
+                            <option value="Portuguese">Portuguese (Português)</option>
+                            <option value="Russian">Russian (Русский)</option>
+                        </select>
+                        <span id="translationSpinner" style="display: none;" class="ai-loading-spinner"></span>
+                        <button type="button" id="btnResetLang" class="ai-tool-pill" style="display: none; padding: 2px 8px; font-size: 0.75rem;" onclick="resetOriginalArticle()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Original (English)
+                        </button>
+                    </div>
+
+                    <!-- 🔤 Font Controls & 📥 Export -->
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Font Size -->
+                        <button type="button" class="ai-tool-pill" style="padding: 2px 8px; font-size: 0.8rem;" onclick="changeFontSize(-1)" title="Decrease font size">A-</button>
+                        <button type="button" class="ai-tool-pill" style="padding: 2px 8px; font-size: 0.8rem;" onclick="changeFontSize(1)" title="Increase font size">A+</button>
+                        <button type="button" class="ai-tool-pill" style="padding: 2px 8px; font-size: 0.8rem;" onclick="toggleFontFamily()" title="Toggle Serif / Sans">
+                            <i class="bi bi-fonts me-1"></i> Font
+                        </button>
+                        
+                        <div class="vr mx-1" style="color: var(--gold);"></div>
+
+                        <!-- Export Options -->
+                        <button type="button" class="ai-tool-pill" onclick="window.print()" title="Print or Save as PDF">
+                            <i class="bi bi-filetype-pdf me-1"></i> PDF
+                        </button>
+                        <a href="{% url 'export-markdown' post.id %}" class="ai-tool-pill text-decoration-none" title="Download Markdown document">
+                            <i class="bi bi-markdown me-1"></i> Markdown
+                        </a>
+                    </div>
+                </div>
+
+                <!-- AI Audio Player (Text-to-Speech) -->
+                <div class="p-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3" 
+                     style="background: rgba(26, 42, 108, 0.35); border: 1px solid var(--turquoise); border-radius: 10px;">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-headphones fs-3 text-info"></i>
+                        <div>
+                            <strong style="color: var(--sand); font-size: 0.95rem;">Audio Narration</strong>
+                            <p class="mb-0" id="ttsStatus" style="font-size: 0.78rem; color: var(--turquoise);">Voice narration ready</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" id="btnTtsPlay" class="ai-btn" style="padding: 6px 14px; font-size: 0.85rem;" onclick="toggleAudioNarration()">
+                            <span id="ttsBtnLabel"><i class="bi bi-play-fill me-1"></i> Listen</span>
+                        </button>
+                        <select id="ttsSpeed" class="form-select form-select-sm m-0" style="width: auto; background: #1b1b1b; color: var(--sand); border: 1px solid var(--gold-dark);" onchange="updateTtsSpeed()">
+                            <option value="1.0">1.0x Speed</option>
+                            <option value="1.25">1.25x Speed</option>
+                            <option value="1.5">1.5x Speed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Article Body -->
+                <div id="articleContentText" class="card-text" style="font-size: 1.1rem; line-height: 1.85; color: var(--sand);">
+                    {{ post.content | linebreaks }}
+                </div>
+
+                <hr style="margin: 35px 0 20px 0; width: 100%;">
+
+                <!-- Social & Engagement Toolbar -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <!-- Likes & Bookmarks -->
+                    <div class="d-flex gap-2 align-items-center">
+                        <button type="button" id="btnLike" class="btn {% if is_liked %}btn-danger{% else %}btn-outline-gold{% endif %}" style="padding: 6px 16px; font-size: 0.9rem;" onclick="toggleLike()">
+                            <span id="likeIcon">{% if is_liked %}<i class="bi bi-heart-fill me-1"></i>{% else %}<i class="bi bi-heart me-1"></i>{% endif %}</span> <span id="likeCount">{{ post.total_likes }}</span> Likes
+                        </button>
+
+                        <button type="button" id="btnBookmark" class="btn {% if is_bookmarked %}btn-primary{% else %}btn-outline-gold{% endif %}" style="padding: 6px 16px; font-size: 0.9rem;" onclick="toggleBookmark()">
+                            <span id="bookmarkIcon">{% if is_bookmarked %}<i class="bi bi-bookmark-fill me-1"></i> Saved{% else %}<i class="bi bi-bookmark me-1"></i> Save{% endif %}</span>
+                        </button>
+                    </div>
+
+                    <!-- Share buttons -->
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size: 0.85rem; color: var(--gold);"><i class="bi bi-share me-1"></i> Share:</span>
+                        <a href="https://twitter.com/intent/tweet?text={{ post.title|urlencode }}&url={{ request.build_absolute_uri|urlencode }}" target="_blank" class="ai-tool-pill" title="Share on Twitter"><i class="bi bi-twitter-x"></i></a>
+                        <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.build_absolute_uri|urlencode }}" target="_blank" class="ai-tool-pill" title="Share on LinkedIn"><i class="bi bi-linkedin"></i></a>
+                        <a href="https://api.whatsapp.com/send?text={{ post.title|urlencode }}%20{{ request.build_absolute_uri|urlencode }}" target="_blank" class="ai-tool-pill" title="Share on WhatsApp"><i class="bi bi-whatsapp"></i></a>
+                        <button type="button" class="ai-tool-pill" onclick="copyPostLink()"><i class="bi bi-link-45deg me-1"></i> Copy Link</button>
+                    </div>
+                </div>
+
+                <!-- Author Edit/Delete Controls -->
+                {% if request.user == post.author %}
+                <div class="d-flex gap-2 mt-4 pt-3" style="border-top: 1px dashed rgba(212,175,55,0.3);">
+                    <a href="{% url 'update-post' post.id %}" class="btn" style="border: 1px solid var(--gold); color: var(--gold); width: auto;"><i class="bi bi-pencil me-1"></i> Edit Post</a>
+                    <a href="{% url 'delete-post' post.id %}" class="btn btn-danger" style="width: auto;"><i class="bi bi-trash3 me-1"></i> Delete Post</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- AI Suite: Executive Summary & Takeaways -->
+        <div class="ai-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="ai-badge"><i class="bi bi-stars me-1"></i> Posty AI Insight</span>
+                    <h5 class="mb-0" style="font-family: 'Cinzel', serif; color: var(--gold);">Executive Summary & Takeaways</h5>
+                </div>
+                <button type="button" id="btnSummarize" class="ai-btn" onclick="fetchSummary()">
+                    <span id="summarizeBtnText"><i class="bi bi-lightning-charge-fill me-1"></i> Generate AI Summary</span>
+                </button>
+            </div>
+
+            <div id="summaryLoading" style="display: none;" class="text-center py-3">
+                <span class="ai-loading-spinner me-2"></span>
+                <span style="color: var(--turquoise);">Posty AI is reading and extracting key insights...</span>
+            </div>
+
+            <div id="summaryContent" style="display: none;">
+                <div class="p-3 mb-3" style="background: rgba(26, 42, 108, 0.35); border-left: 3px solid var(--gold); border-radius: 6px;">
+                    <p id="summaryText" class="mb-2" style="font-weight: 500;"></p>
+                    <div class="d-flex gap-2 flex-wrap mt-2">
+                        <span id="readingTimeBadge" class="badge" style="background: rgba(0, 180, 216, 0.2); border: 1px solid var(--turquoise); color: var(--turquoise);"></span>
+                        <span id="sentimentBadge" class="badge" style="background: rgba(212, 175, 55, 0.2); border: 1px solid var(--gold); color: var(--gold);"></span>
+                    </div>
+                </div>
+
+                <h6 style="color: var(--gold); font-family: 'Cinzel', serif;"><i class="bi bi-check2-all me-1"></i> Key Takeaways:</h6>
+                <ul id="takeawaysList" style="padding-left: 20px; color: var(--sand); line-height: 1.7;"></ul>
+            </div>
+        </div>
+
+        <!-- AI Reader Assistant Q&A -->
+        <div class="ai-card mb-4">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="ai-badge"><i class="bi bi-chat-left-dots me-1"></i> Ask Posty AI</span>
+                <h5 class="mb-0" style="font-family: 'Cinzel', serif; color: var(--gold);">Reader Q&A Assistant</h5>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--desert); margin-bottom: 12px;">Have questions about this article? Ask the AI assistant below:</p>
+            
+            <!-- Quick Chips -->
+            <div class="mb-3">
+                <span class="ai-chip" onclick="askChip('What are the main conclusions of this article?')"><i class="bi bi-lightbulb me-1"></i> Main conclusions</span>
+                <span class="ai-chip" onclick="askChip('Why is this topic important?')"><i class="bi bi-question-circle me-1"></i> Why this matters</span>
+                <span class="ai-chip" onclick="askChip('Can you explain this in simple terms?')"><i class="bi bi-book me-1"></i> Key highlights</span>
+            </div>
+
+            <!-- Chat Dialog Box -->
+            <div id="aiChatBox" class="ai-chat-box">
+                <div class="ai-msg bot">
+                    Hello! I am your Posty AI reading assistant. Ask me any question regarding <strong>"{{ post.title }}"</strong>.
+                </div>
+            </div>
+
+            <!-- Chat Input Form -->
+            <div class="d-flex gap-2">
+                <input type="text" id="aiQuestionInput" placeholder="Ask a question about this article..." 
+                       style="margin: 0; background: #1b1b1b; color: var(--sand); border: 1.5px solid var(--gold-dark); border-radius: 8px;"
+                       onkeydown="if(event.key === 'Enter') sendQuestion();">
+                <button type="button" class="ai-btn ai-btn-gold" style="white-space: nowrap;" onclick="sendQuestion()">
+                    <span><i class="bi bi-send-fill me-1"></i> Ask AI</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Comments & Community Section -->
+        <div class="ai-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="ai-badge"><i class="bi bi-chat-quote-fill me-1"></i> Discussion</span>
+                    <h5 class="mb-0" style="font-family: 'Cinzel', serif; color: var(--gold);">Comments ({{ post.total_comments }})</h5>
+                </div>
+            </div>
+
+            <!-- Add Comment Form -->
+            {% if request.user.is_authenticated %}
+            <form action="{% url 'add-comment' post.id %}" method="post" class="mb-4 p-0" style="width: 100%; background: transparent; border: none; box-shadow: none;">
+                {% csrf_token %}
+                <div class="mb-2">
+                    {{ comment_form.content }}
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span style="font-size: 0.82rem; color: var(--desert);">Posting as <strong>{{ request.user.username }}</strong></span>
+                    <button type="submit" class="btn btn-primary" style="padding: 6px 20px; font-size: 0.9rem;">
+                        <i class="bi bi-chat-square-text me-1"></i> Post Comment
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <div class="p-3 mb-4 text-center" style="background: rgba(26, 42, 108, 0.3); border: 1px dashed var(--gold); border-radius: 8px;">
+                <p class="mb-2" style="color: var(--sand); font-size: 0.95rem;">Join the discussion and share your perspective!</p>
+                <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary btn-sm px-3">Log in to Comment</a>
+            </div>
+            {% endif %}
+
+            <!-- Comments List -->
+            <div class="comments-list mt-3">
+                {% for comment in comments %}
+                <div class="p-3 mb-3" style="background: #141414; border: 1px solid rgba(212,175,55,0.25); border-radius: 10px;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <a href="{% url 'author-profile' comment.author.username %}" class="d-flex align-items-center text-decoration-none" style="color: var(--sand);">
+                            <img src="{{ comment.author.profile.get_avatar }}" alt="{{ comment.author.username }}" width="26" height="26" class="rounded-circle me-2" style="border: 1px solid var(--gold); object-fit: cover;">
+                            <strong style="color: var(--gold); font-size: 0.9rem;">{{ comment.author.username }}</strong>
+                            {% if comment.author == post.author %}
+                            <span class="badge ms-2" style="font-size: 0.65rem; background: var(--lapis); color: var(--turquoise); border: 1px solid var(--turquoise);">Author</span>
+                            {% endif %}
+                        </a>
+                        <span style="font-size: 0.78rem; color: var(--desert);"><i class="bi bi-clock me-1"></i>{{ comment.created_at|timesince }} ago</span>
+                    </div>
+                    <p class="mb-2" style="color: var(--sand); font-size: 0.93rem; line-height: 1.5;">{{ comment.content | linebreaksbr }}</p>
+
+                    <!-- Author Smart Reply AI Tool -->
+                    {% if request.user == post.author and comment.author != post.author %}
+                    <div class="mt-2 text-end">
+                        <button type="button" class="ai-tool-pill" onclick="generateSmartReply('{{ post.title|escapejs }}', '{{ comment.content|escapejs }}', this)">
+                            <i class="bi bi-stars me-1"></i> Draft AI Reply
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p class="text-center py-3 mb-0" style="color: var(--desert); font-style: italic;">No comments yet. Be the first to share your thoughts!</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+    const postId = {{ post.id }};
+
+    // ==========================================
+    // 🎧 AI Audio Narration (TTS)
+    // ==========================================
+    let synth = window.speechSynthesis;
+    let utterance = null;
+    let isPlaying = false;
+
+    function toggleAudioNarration() {
+        if (!synth) {
+            alert('Text-to-speech is not supported on your browser.');
+            return;
+        }
+
+        const btn = document.getElementById('btnTtsPlay');
+        const btnLabel = document.getElementById('ttsBtnLabel');
+        const status = document.getElementById('ttsStatus');
+
+        if (isPlaying) {
+            if (synth.speaking && !synth.paused) {
+                synth.pause();
+                isPlaying = false;
+                btnLabel.innerText = '▶️ Resume Audio';
+                status.innerText = 'Paused';
+            }
+        } else {
+            if (synth.paused) {
+                synth.resume();
+                isPlaying = true;
+                btnLabel.innerText = '⏸️ Pause Audio';
+                status.innerText = 'Playing narration...';
+            } else {
+                synth.cancel();
+                const textToRead = `Article: {{ post.title }}. {{ post.subtitle }}. ` + document.getElementById('articleContentText').innerText;
+                utterance = new SpeechSynthesisUtterance(textToRead);
+                utterance.rate = parseFloat(document.getElementById('ttsSpeed').value) || 1.0;
+
+                utterance.onend = () => {
+                    isPlaying = false;
+                    btnLabel.innerText = '▶️ Play Audio';
+                    status.innerText = 'Finished narration';
+                };
+
+                synth.speak(utterance);
+                isPlaying = true;
+                btnLabel.innerText = '⏸️ Pause Audio';
+                status.innerText = 'Playing narration...';
+            }
+        }
+    }
+
+    function updateTtsSpeed() {
+        if (isPlaying && utterance) {
+            toggleAudioNarration();
+            toggleAudioNarration();
+        }
+    }
+
+    // ==========================================
+    // ❤️ Likes & 🔖 Bookmarks AJAX
+    // ==========================================
+    async function toggleLike() {
+        {% if not request.user.is_authenticated %}
+        showToast('Please log in to like articles!', 'info');
+        return;
+        {% endif %}
+
+        try {
+            const res = await fetch(`/post/${postId}/like/`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                const btn = document.getElementById('btnLike');
+                const count = document.getElementById('likeCount');
+                const icon = document.getElementById('likeIcon');
+
+                count.innerText = data.total_likes;
+                if (data.is_liked) {
+                    btn.className = 'btn btn-danger';
+                    icon.innerText = '❤️';
+                    showToast('Liked post!', 'success');
+                } else {
+                    btn.className = 'btn btn-outline-gold';
+                    icon.innerText = '🤍';
+                    showToast('Unliked post', 'info');
+                }
+            }
+        } catch (err) {
+            showToast('Error: ' + err.message, 'error');
+        }
+    }
+
+    async function toggleBookmark() {
+        {% if not request.user.is_authenticated %}
+        showToast('Please log in to bookmark articles!', 'info');
+        return;
+        {% endif %}
+
+        try {
+            const res = await fetch(`/post/${postId}/bookmark/`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                const btn = document.getElementById('btnBookmark');
+                const icon = document.getElementById('bookmarkIcon');
+                if (data.is_bookmarked) {
+                    btn.className = 'btn btn-primary';
+                    icon.innerText = '🔖 Saved';
+                    showToast('Added to Saved Articles!', 'success');
+                } else {
+                    btn.className = 'btn btn-outline-gold';
+                    icon.innerText = '📑 Save';
+                    showToast('Removed from Saved Articles', 'info');
+                }
+            }
+        } catch (err) {
+            showToast('Error: ' + err.message, 'error');
+        }
+    }
+
+    function copyPostLink() {
+        navigator.clipboard.writeText(window.location.href);
+        showToast('Post link copied to clipboard!', 'success');
+    }
+
+    // ==========================================
+    // ✨ Author Smart Reply with AI
+    // ==========================================
+    async function generateSmartReply(postTitle, commentText, btnElement) {
+        btnElement.innerHTML = '<span class="ai-loading-spinner me-1"></span> Drafting...';
+        btnElement.disabled = true;
+
+        try {
+            const res = await fetch("{% url 'ai-comment-reply' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ post_title: postTitle, comment_text: commentText })
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                const commentBox = document.querySelector('textarea[name="content"]');
+                if (commentBox) {
+                    commentBox.value = data.data.reply;
+                    commentBox.scrollIntoView({ behavior: 'smooth' });
+                    commentBox.focus();
+                    showToast('✨ AI suggested reply inserted into comment box!', 'success');
+                }
+            } else {
+                showToast('Failed to draft reply: ' + (data.error || 'Unknown error'), 'error');
+            }
+        } catch (err) {
+            showToast('Error: ' + err.message, 'error');
+        } finally {
+            btnElement.innerHTML = '✨ Draft AI Reply';
+            btnElement.disabled = false;
+        }
+    }
+
+    // ==========================================
+    // AI Summary & Chat
+    // ==========================================
+    async function fetchSummary() {
+        const btn = document.getElementById('btnSummarize');
+        const btnText = document.getElementById('summarizeBtnText');
+        const loading = document.getElementById('summaryLoading');
+        const content = document.getElementById('summaryContent');
+
+        btn.disabled = true;
+        btnText.innerHTML = '<span class="ai-loading-spinner me-2"></span> Analyzing...';
+        loading.style.display = 'block';
+        content.style.display = 'none';
+
+        try {
+            const res = await fetch(`/api/ai/summarize/${postId}/`);
+            const data = await res.json();
+            if (data.success && data.data) {
+                const s = data.data;
+                document.getElementById('summaryText').innerText = s.summary || '';
+                document.getElementById('readingTimeBadge').innerText = `⏱️ ~${s.reading_time_minutes || 2} min read`;
+                document.getElementById('sentimentBadge').innerText = `✨ ${s.sentiment || 'Insightful'}`;
+
+                const list = document.getElementById('takeawaysList');
+                list.innerHTML = '';
+                (s.key_takeaways || []).forEach(item => {
+                    const li = document.createElement('li');
+                    li.innerText = item;
+                    list.appendChild(li);
+                });
+
+                content.style.display = 'block';
+                btnText.innerHTML = '⚡ Refresh Summary';
+            } else {
+                alert('Could not generate summary: ' + (data.error || 'Unknown error'));
+            }
+        } catch (err) {
+            alert('Error generating summary: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            loading.style.display = 'none';
+        }
+    }
+
+    function askChip(text) {
+        document.getElementById('aiQuestionInput').value = text;
+        sendQuestion();
+    }
+
+    async function sendQuestion() {
+        const input = document.getElementById('aiQuestionInput');
+        const question = input.value.trim();
+        const chatBox = document.getElementById('aiChatBox');
+
+        if (!question) return;
+
+        const userMsg = document.createElement('div');
+        userMsg.className = 'ai-msg user';
+        userMsg.innerText = question;
+        chatBox.appendChild(userMsg);
+        input.value = '';
+
+        const botMsg = document.createElement('div');
+        botMsg.className = 'ai-msg bot';
+        botMsg.innerHTML = '<span class="ai-loading-spinner me-2"></span> Thinking...';
+        chatBox.appendChild(botMsg);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            const res = await fetch(`/api/ai/chat/${postId}/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question })
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                botMsg.innerText = data.data.answer || 'No response generated.';
+            } else {
+                botMsg.innerText = '❌ ' + (data.error || 'Failed to get answer.');
+            }
+        } catch (err) {
+            botMsg.innerText = '❌ Error: ' + err.message;
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // ==========================================
+    // 🌍 AI Multi-Language Translation
+    // ==========================================
+    const titleEl = document.getElementById('postTitleHeading');
+    const subtitleEl = document.getElementById('postSubtitleHeading');
+    const contentEl = document.getElementById('articleContentText');
+    const spinnerEl = document.getElementById('translationSpinner');
+    const resetBtn = document.getElementById('btnResetLang');
+    const selectLang = document.getElementById('selectTranslateLang');
+
+    const originalTitle = titleEl ? titleEl.innerText : '';
+    const originalSubtitle = subtitleEl ? subtitleEl.innerText : '';
+    const originalContentHtml = contentEl ? contentEl.innerHTML : '';
+
+    function renderMarkdownToHtml(md) {
+        if (!md) return '';
+        let html = md
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/^### (.*$)/gim, '<h4 style="color: var(--gold); margin-top: 25px; margin-bottom: 10px; font-family: \'Cinzel\', serif;">$1</h4>')
+            .replace(/^## (.*$)/gim, '<h3 style="color: var(--gold); margin-top: 25px; margin-bottom: 12px; font-family: \'Cinzel\', serif;">$1</h3>')
+            .replace(/^# (.*$)/gim, '<h2 style="color: var(--gold); margin-top: 30px; margin-bottom: 15px; font-family: \'Cinzel\', serif;">$1</h2>')
+            .replace(/^\> (.*$)/gim, '<blockquote style="border-left: 3px solid var(--gold); padding-left: 15px; margin: 15px 0; color: var(--sand); font-style: italic;">$1</blockquote>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong style="color: var(--gold);">$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em style="color: var(--turquoise);">$1</em>')
+            .replace(/^- (.*$)/gim, '<li style="margin-bottom: 6px;">$1</li>')
+            .replace(/\n\n/g, '</p><p style="margin-bottom: 18px; line-height: 1.85;">')
+            .replace(/\n/g, '<br>');
+
+        return `<p style="margin-bottom: 18px; line-height: 1.85;">${html}</p>`;
+    }
+
+    async function translateArticle(lang) {
+        if (!lang) return;
+        if (spinnerEl) spinnerEl.style.display = 'inline-block';
+        showToast(`🌍 Translating article into ${lang}...`, 'info');
+        
+        try {
+            const res = await fetch(`/api/ai/translate/${postId}/?lang=${encodeURIComponent(lang)}`);
+            const data = await res.json();
+            if (data.success && data.data) {
+                const t = data.data;
+                if (titleEl && t.title) titleEl.innerText = t.title;
+                if (subtitleEl && t.subtitle) subtitleEl.innerText = t.subtitle;
+                if (contentEl && t.content) {
+                    contentEl.innerHTML = renderMarkdownToHtml(t.content);
+                }
+                if (resetBtn) resetBtn.style.display = 'inline-block';
+                showToast(`✨ Article successfully translated into ${lang}!`, 'success');
+            } else {
+                showToast('Translation error: ' + (data.error || 'Could not translate'), 'error');
+            }
+        } catch (err) {
+            showToast('Error during translation: ' + err.message, 'error');
+        } finally {
+            if (spinnerEl) spinnerEl.style.display = 'none';
+        }
+    }
+
+    function resetOriginalArticle() {
+        if (titleEl) titleEl.innerText = originalTitle;
+        if (subtitleEl) subtitleEl.innerText = originalSubtitle;
+        if (contentEl) contentEl.innerHTML = originalContentHtml;
+        if (selectLang) selectLang.value = '';
+        if (resetBtn) resetBtn.style.display = 'none';
+        showToast('Restored original English article', 'info');
+    }
+
+    // ==========================================
+    // 🔤 Font Size & Family Controls
+    // ==========================================
+    let currentFontSize = 1.1;
+    let isSerif = true;
+
+    function changeFontSize(delta) {
+        currentFontSize = Math.max(0.85, Math.min(1.6, currentFontSize + (delta * 0.1)));
+        if (contentEl) contentEl.style.fontSize = `${currentFontSize}rem`;
+    }
+
+    function toggleFontFamily() {
+        isSerif = !isSerif;
+        const font = isSerif ? "'Marcellus', serif" : "system-ui, -apple-system, sans-serif";
+        if (contentEl) contentEl.style.fontFamily = font;
+        showToast(`Font switched to ${isSerif ? 'Serif' : 'Sans-Serif'}`, 'info');
+    }
+    </script>
+{% endblock content %}
+
+
+
+

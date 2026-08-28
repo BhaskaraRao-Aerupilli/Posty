@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}
+    <title>Edit Profile - Posty</title>
+{% endblock title %}
+{% block content %}
+    <h1>Edit Your Profile</h1>
+    <hr>
+
+    <div class="form-posty-wrapper">
+        <div class="text-center mb-4">
+            <div class="position-relative d-inline-block">
+                <img id="avatarPreviewImg" src="{{ profile.get_avatar }}" alt="Avatar" width="100" height="100" class="rounded-circle" style="border: 2.5px solid var(--gold); object-fit: cover; box-shadow: 0 0 15px rgba(212,175,55,0.4);">
+            </div>
+            <h4 class="mt-2 mb-0" style="font-family: 'Cinzel', serif; color: var(--gold);">{{ request.user.username }}</h4>
+            <span style="font-size: 0.82rem; color: var(--desert);">Author on Posty</span>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" style="margin: 0; padding: 0; width: 100%; background: transparent; border: none; box-shadow: none;">
+            {% csrf_token %}
+            
+            <!-- Bio Input -->
+            <div class="mb-4">
+                <label for="id_bio"><i class="bi bi-card-text me-1"></i> Bio / About You</label>
+                {{ form.bio }}
+            </div>
+
+            <!-- Upload Photo from Computer -->
+            <div class="mb-4 p-3" style="background: rgba(18,18,18,0.7); border: 1px dashed rgba(212,175,55,0.35); border-radius: 10px;">
+                <label for="id_avatar" class="mt-0 mb-2">
+                    <i class="bi bi-cloud-arrow-up-fill text-warning me-1"></i> Upload Profile Photo
+                </label>
+                {{ form.avatar }}
+                <small class="text-muted d-block mt-1" style="color: var(--desert) !important; font-size: 0.8rem;">
+                    Upload JPG, PNG, or WEBP photo from your computer/device.
+                </small>
+            </div>
+
+            <!-- Or Avatar Image URL -->
+            <div class="mb-4 p-3" style="background: rgba(18,18,18,0.7); border: 1px solid rgba(212,175,55,0.25); border-radius: 10px;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label for="id_avatar_url" class="m-0">
+                        <i class="bi bi-link-45deg text-info me-1"></i> Or Photo URL / AI Avatar
+                    </label>
+                    <button type="button" class="ai-tool-pill" onclick="generateAiAvatar()">
+                        <i class="bi bi-stars me-1"></i> Generate AI Avatar
+                    </button>
+                </div>
+                {{ form.avatar_url }}
+                <small class="text-muted d-block mt-1" style="color: var(--desert) !important; font-size: 0.8rem;">
+                    Paste direct photo link (e.g. from GitHub, Gravatar, Unsplash, Google) or click "Generate AI Avatar".
+                </small>
+            </div>
+
+            <div class="d-flex gap-3 mt-4">
+                <button class="btn btn-primary flex-grow-1" type="submit">
+                    <i class="bi bi-check2-circle me-1"></i> Save Changes
+                </button>
+                <a href="{% url 'author-profile' request.user.username %}" class="btn" style="border: 1px solid var(--gold); color: var(--sand);">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+    // Live photo preview on file pick
+    const avatarFileInput = document.getElementById('id_avatar');
+    if (avatarFileInput) {
+        avatarFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    document.getElementById('avatarPreviewImg').src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // AI Avatar Generator
+    async function generateAiAvatar() {
+        const username = "{{ request.user.username|escapejs }}";
+        const promptText = prompt("Enter a theme or style for your AI Avatar:", `Stylized Egyptian pharaoh digital portrait of ${username}, golden lighting, 8k`);
+        if (!promptText) return;
+
+        showToast('🎨 Generating AI Avatar...', 'info');
+        try {
+            const res = await fetch("{% url 'ai-generate-image' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: promptText })
+            });
+            const data = await res.json();
+            if (data.success && data.data && data.data.url) {
+                document.getElementById('id_avatar_url').value = data.data.url;
+                document.getElementById('avatarPreviewImg').src = data.data.thumb || data.data.url;
+                showToast('✨ AI Avatar generated and attached!', 'success');
+            } else {
+                showToast('Failed to generate avatar: ' + (data.error || 'Unknown'), 'error');
+            }
+        } catch (err) {
+            showToast('Error: ' + err.message, 'error');
+        }
+    }
+    </script>
+{% endblock content %}

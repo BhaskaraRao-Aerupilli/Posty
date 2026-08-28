@@ -1,16 +1,17 @@
 services:
   - type: web
-    name: Posty
+    name: posty-app
     env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn myproject.wsgi:application"
     plan: free
-    buildCommand: |
-      pip install -r requirements.txt
-      python manage.py collectstatic --noinput
-    startCommand: bash -lc "python manage.py migrate && gunicorn myproject.wsgi --bind 0.0.0.0:$PORT"
+    autoDeploy: true
     envVars:
-      - key: DJANGO_SECRET_KEY
-        generate: secret
+      - key: PYTHON_VERSION
+        value: 3.11.0
       - key: DJANGO_DEBUG
-        value: 'False'
+        value: "False"
       - key: DJANGO_ALLOWED_HOSTS
-        value: '*'
+        value: "*"
+      - key: GROQ_API_KEY
+        sync: false

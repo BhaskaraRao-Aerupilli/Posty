@@ -1,14 +1,289 @@
 {% extends 'base.html' %}
 {% block title %}
-    <title>Update Post</title>
+<title>Update Post - Posty AI</title>
 {% endblock title %}
 {% block content %}
+
     <h1>Update Post</h1>
     <hr>
     
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button class= "btn btn-primary" type="submit">Update</button>
-    </form>
-    {% endblock content %}
+    <div class="form-posty-wrapper">
+        <form id="postForm" method="post" enctype="multipart/form-data" style="margin: 0; padding: 0; width: 100%; background: transparent; border: none; box-shadow: none;">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="id_title">Title</label>
+                {{ form.title }}
+            </div>
+
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <label for="id_subtitle" class="mb-0">Subtitle / Hook</label>
+                    <button type="button" class="ai-tool-pill" onclick="aiAction('hooks')"><i class="bi bi-lightbulb me-1"></i> Suggest Hooks</button>
+                </div>
+                {{ form.subtitle }}
+            </div>
+
+            <div class="mb-3">
+                <label for="id_category">Category</label>
+                {{ form.category }}
+            </div>
+
+
+            <!-- Cover Image & Web / AI Image Picker -->
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                    <label for="id_image" class="mb-0">Cover Image</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="ai-btn" style="padding: 4px 10px; font-size: 0.82rem;" data-bs-toggle="modal" data-bs-target="#imageSearchModal" onclick="prepareImageSearchModal()">
+                            <i class="bi bi-image me-1"></i> Web Images
+                        </button>
+                        <button type="button" class="ai-btn ai-btn-gold" style="padding: 4px 10px; font-size: 0.82rem;" onclick="generateAiArtworkPrompt()">
+                            <i class="bi bi-brush me-1"></i> Generate AI Artwork
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Web / AI Image Preview Box -->
+                <div id="imagePreviewContainer" class="p-3 mb-3 text-center" style="{% if not post.get_image_url %}display: none;{% endif %} background: rgba(0,0,0,0.6); border: 1.5px dashed var(--turquoise); border-radius: 8px;">
+                    <img id="imagePreviewImg" src="{{ post.get_image_url|default:'' }}" alt="Cover Preview" style="max-height: 200px; max-width: 100%; border-radius: 6px; object-fit: cover; box-shadow: 0 0 15px rgba(0,180,216,0.3);">
+                    <div class="mt-2 d-flex justify-content-center align-items-center gap-2">
+                        <span id="imageSourceLabel" style="font-size: 0.85rem; color: var(--turquoise);"><i class="bi bi-check-circle me-1"></i> Cover Image</span>
+                        <button type="button" class="btn btn-sm btn-danger" style="padding: 2px 8px; font-size: 0.75rem;" onclick="clearSelectedImage()">Clear</button>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    {{ form.image }}
+                </div>
+                <input type="hidden" name="image_url" id="id_image_url" value="{{ post.image_url|default:'' }}">
+            </div>
+
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                    <label for="id_content" class="mb-0">Content</label>
+                    <div class="ai-toolbar mb-0">
+                        <span style="font-size: 0.8rem; color: var(--gold); margin-right: 4px;"><i class="bi bi-stars me-1"></i> AI Tools:</span>
+                        <button type="button" class="ai-tool-pill" onclick="aiAction('polish')"><i class="bi bi-magic me-1"></i> Polish</button>
+                        <button type="button" class="ai-tool-pill" onclick="aiAction('expand')"><i class="bi bi-arrows-angle-expand me-1"></i> Expand</button>
+                        <button type="button" class="ai-tool-pill" onclick="aiAction('shorten')"><i class="bi bi-scissors me-1"></i> Shorten</button>
+                        <button type="button" class="ai-tool-pill" onclick="aiAction('fix_grammar')"><i class="bi bi-check2-circle me-1"></i> Fix Grammar</button>
+                    </div>
+                </div>
+                <div id="aiStatus" class="mb-2" style="display: none; font-size: 0.85rem; color: var(--turquoise);"></div>
+                {{ form.content }}
+            </div>
+
+            <!-- Draft or Publish Selection -->
+            <div class="mb-4 p-3" style="background: rgba(15,15,15,0.7); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px;">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="is_draft" id="id_is_draft" {% if post.is_draft %}checked{% endif %} style="width: 20px; height: 20px; margin-top: 2px;">
+                    <label class="form-check-label ms-2" for="id_is_draft" style="color: var(--sand); font-size: 0.95rem;">
+                        <i class="bi bi-file-earmark-lock me-1"></i> <strong>Save as Draft</strong> (Do not show on public feed)
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="d-flex gap-3 mt-4">
+                <button class="btn btn-primary flex-grow-1" type="submit">
+                    <i class="bi bi-cloud-upload me-1"></i> Update Post
+                </button>
+                <a href="{% url 'display-post' %}" class="btn" style="border: 1px solid var(--gold); color: var(--sand);">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Live Web / Google Image Search Modal -->
+    <div class="modal fade" id="imageSearchModal" tabindex="-1" aria-labelledby="imageSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content pharaoh-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageSearchModalLabel" style="font-family: 'Cinzel', serif; color: var(--gold);"><i class="bi bi-search me-2"></i> Live Web & Google Image Search</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input type="text" id="webImageQuery" class="form-control" placeholder="Search keywords (e.g. AI Technology, Pyramids, Galaxy, Cyberpunk)..." 
+                               style="background: #1b1b1b; color: var(--sand); border: 1.5px solid var(--gold-dark);"
+                               onkeydown="if(event.key === 'Enter') executeImageSearch();">
+                        <button class="ai-btn ai-btn-gold" type="button" onclick="executeImageSearch()"><i class="bi bi-search me-1"></i> Search Live Web</button>
+                    </div>
+
+
+                    <!-- Quick keyword chips -->
+                    <div class="mb-3">
+                        <span style="font-size: 0.8rem; color: var(--gold); margin-right: 6px;">Popular:</span>
+                        <span class="ai-chip" onclick="searchImageChip('Artificial Intelligence')">🤖 AI</span>
+                        <span class="ai-chip" onclick="searchImageChip('Ancient Egypt Pyramids')">🏛️ Pyramids</span>
+                        <span class="ai-chip" onclick="searchImageChip('Coding Programming')">💻 Coding</span>
+                        <span class="ai-chip" onclick="searchImageChip('Futuristic City')">🌆 Sci-Fi</span>
+                        <span class="ai-chip" onclick="searchImageChip('Nature Landscape')">🌿 Nature</span>
+                    </div>
+
+                    <div id="imageSearchStatus" style="display: none;" class="text-center py-2">
+                        <span class="ai-loading-spinner me-2"></span>
+                        <span style="color: var(--turquoise);">Searching live web & Google images...</span>
+                    </div>
+
+                    <!-- Grid of web images -->
+                    <div id="imageGrid" class="row row-cols-2 row-cols-md-3 g-3 mt-2" style="max-height: 400px; overflow-y: auto;">
+                        <div class="col-12 text-center py-4" style="color: var(--desert);">
+                            Enter a search term or click a topic chip to find live images.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" style="border: 1px solid var(--gold); color: var(--sand);" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function selectWebImage(imageUrl, sourceName) {
+        document.getElementById('id_image_url').value = imageUrl;
+        const preview = document.getElementById('imagePreviewImg');
+        const container = document.getElementById('imagePreviewContainer');
+        const label = document.getElementById('imageSourceLabel');
+
+        preview.src = imageUrl;
+        label.innerText = `🌐 ${sourceName || 'Live Web Image'} Selected`;
+        container.style.display = 'block';
+
+        const modalEl = document.getElementById('imageSearchModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+
+    function clearSelectedImage() {
+        document.getElementById('id_image_url').value = '';
+        document.getElementById('imagePreviewContainer').style.display = 'none';
+        document.getElementById('imagePreviewImg').src = '';
+    }
+
+    function prepareImageSearchModal() {
+        const title = document.getElementById('id_title').value.trim();
+        const queryInput = document.getElementById('webImageQuery');
+        if (title && !queryInput.value) {
+            queryInput.value = title;
+            executeImageSearch();
+        }
+    }
+
+    function searchImageChip(kw) {
+        document.getElementById('webImageQuery').value = kw;
+        executeImageSearch();
+    }
+
+    async function executeImageSearch() {
+        const query = document.getElementById('webImageQuery').value.trim();
+        if (!query) return;
+
+        const statusDiv = document.getElementById('imageSearchStatus');
+        const grid = document.getElementById('imageGrid');
+
+        statusDiv.style.display = 'block';
+        grid.innerHTML = '';
+
+        try {
+            const res = await fetch(`/api/images/search/?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            if (data.success && data.images && data.images.length > 0) {
+                grid.innerHTML = '';
+                data.images.forEach(img => {
+                    const col = document.createElement('div');
+                    col.className = 'col';
+                    col.innerHTML = `
+                        <div class="card h-100" style="cursor: pointer; border: 1px solid var(--gold-dark); background: #181818;" 
+                             onclick="selectWebImage('${img.url.replace(/'/g, "\\'")}', '${(img.source || 'Web').replace(/'/g, "\\'")}')">
+                            <img src="${img.thumb || img.url}" class="card-img-top" alt="${img.title || 'Image'}" style="height: 120px; object-fit: cover;">
+                            <div class="card-body p-2 text-center">
+                                <span class="badge" style="font-size: 0.7rem; background: rgba(0, 180, 216, 0.2); color: var(--turquoise); border: 1px solid var(--turquoise);">${img.source || 'Web'}</span>
+                                <p class="mb-0 mt-1 text-truncate" style="font-size: 0.75rem; color: var(--sand);">${img.title || query}</p>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(col);
+                });
+            } else {
+                grid.innerHTML = '<div class="col-12 text-center py-4 text-warning">No images found. Try a different search query!</div>';
+            }
+        } catch (err) {
+            grid.innerHTML = '<div class="col-12 text-center py-4 text-danger">Error fetching images: ' + err.message + '</div>';
+        } finally {
+            statusDiv.style.display = 'none';
+        }
+    }
+
+    async function aiAction(action) {
+        const contentEl = document.getElementById('id_content');
+        const subtitleEl = document.getElementById('id_subtitle');
+        const aiStatus = document.getElementById('aiStatus');
+        const textToProcess = action === 'hooks' ? (document.getElementById('id_title').value || contentEl.value) : contentEl.value;
+
+        if (!textToProcess.trim()) {
+            alert('Please enter text before using AI tools.');
+            return;
+        }
+
+        aiStatus.style.display = 'block';
+        aiStatus.innerHTML = `<span class="ai-loading-spinner me-2"></span> Processing (${action})...`;
+
+        try {
+            const res = await fetch("{% url 'ai-enhance-text' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: textToProcess, action: action })
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                if (action === 'hooks') {
+                    const hooks = data.data.enhanced_content;
+                    const lines = hooks.split('\n').filter(l => l.trim());
+                    if (lines.length > 0) {
+                        subtitleEl.value = lines[0].replace(/^💡\s*(Hook\s*\d+:)?\s*/i, '').trim();
+                    }
+                    aiStatus.innerHTML = '✨ Catchy hook suggested in Subtitle!';
+                } else {
+                    contentEl.value = data.data.enhanced_content;
+                    aiStatus.innerHTML = `✨ Content enhanced (${action})!`;
+                }
+                setTimeout(() => { aiStatus.style.display = 'none'; }, 4000);
+            } else {
+                aiStatus.innerHTML = '❌ ' + (data.error || 'Enhancement failed');
+            }
+        } catch (err) {
+            aiStatus.innerHTML = '❌ Error: ' + err.message;
+        }
+    }
+
+    async function generateAiArtworkPrompt() {
+        const title = document.getElementById('id_title').value.trim();
+        const category = document.getElementById('id_category').value;
+        const topic = title ? `${title} (${category})` : prompt('Enter a topic or prompt for AI artwork:', 'Futuristic cyber temple in Egyptian desert, golden hour 8k');
+        if (!topic) return;
+
+        showToast('🎨 Generating AI Artwork...', 'info');
+        try {
+            const res = await fetch("{% url 'ai-generate-image' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: topic })
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                selectImage(data.data.url, data.data.thumb);
+                document.getElementById('imageSourceLabel').innerText = '🎨 Custom AI Artwork Attached';
+                showToast('✨ Custom AI Artwork attached to post!', 'success');
+            } else {
+                showToast('Failed to generate AI art: ' + (data.error || 'Unknown'), 'error');
+            }
+        } catch (err) {
+            showToast('Error generating AI art: ' + err.message, 'error');
+        }
+    }
+    </script>
+{% endblock content %}
+
+

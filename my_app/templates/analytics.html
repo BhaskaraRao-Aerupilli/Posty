@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}
+    <title>Author Analytics Dashboard - Posty</title>
+{% endblock title %}
+{% block content %}
+    <h1>Creator Analytics</h1>
+    <hr>
+
+    <div style="max-width: 54rem; margin: 20px auto 60px auto; padding: 0 15px;">
+        <!-- Top Metrics Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-6">
+                <div class="card p-3 text-center" style="border: 1.5px solid var(--gold); background: rgba(15,15,15,0.95); box-shadow: 0 0 15px rgba(212,175,55,0.2);">
+                    <i class="bi bi-eye fs-2 text-warning"></i>
+                    <h3 class="mt-2 mb-0" style="color: var(--gold); font-weight: bold;">{{ total_views }}</h3>
+                    <span style="font-size: 0.8rem; color: var(--desert);">Total Impressions</span>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-6">
+                <div class="card p-3 text-center" style="border: 1.5px solid var(--turquoise); background: rgba(15,15,15,0.95); box-shadow: 0 0 15px rgba(0,180,216,0.2);">
+                    <i class="bi bi-heart-fill fs-2 text-danger"></i>
+                    <h3 class="mt-2 mb-0" style="color: #ff6b6b; font-weight: bold;">{{ total_likes }}</h3>
+                    <span style="font-size: 0.8rem; color: var(--desert);">Total Likes</span>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-6">
+                <div class="card p-3 text-center" style="border: 1.5px solid var(--gold); background: rgba(15,15,15,0.95); box-shadow: 0 0 15px rgba(212,175,55,0.2);">
+                    <i class="bi bi-chat-left-dots fs-2 text-warning"></i>
+                    <h3 class="mt-2 mb-0" style="color: var(--sand); font-weight: bold;">{{ total_comments }}</h3>
+                    <span style="font-size: 0.8rem; color: var(--desert);">Comments Received</span>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-6">
+                <div class="card p-3 text-center" style="border: 1.5px solid var(--turquoise); background: rgba(15,15,15,0.95); box-shadow: 0 0 15px rgba(0,180,216,0.2);">
+                    <i class="bi bi-graph-up-arrow fs-2 text-info"></i>
+                    <h3 class="mt-2 mb-0" style="color: var(--turquoise); font-weight: bold;">{{ engagement_rate }}%</h3>
+                    <span style="font-size: 0.8rem; color: var(--desert);">Engagement Rate</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Section: Published vs Drafts & Categories -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="ai-card h-100">
+                    <h5 style="font-family: 'Cinzel', serif; color: var(--gold); margin-bottom: 15px;"><i class="bi bi-bar-chart-fill me-2"></i> Publishing Overview</h5>
+                    <div class="d-flex justify-content-between p-2 mb-2" style="background: rgba(26,42,108,0.3); border-radius: 6px;">
+                        <span>Published Articles:</span>
+                        <strong style="color: var(--gold);">{{ total_published }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between p-2 mb-2" style="background: rgba(26,42,108,0.3); border-radius: 6px;">
+                        <span>Private Drafts:</span>
+                        <strong style="color: var(--desert);">{{ total_drafts }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between p-2 mb-2" style="background: rgba(26,42,108,0.3); border-radius: 6px;">
+                        <span>Bookmarked by Readers:</span>
+                        <strong style="color: var(--turquoise);">{{ total_bookmarks }}</strong>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{% url 'add-post' %}" class="ai-btn w-100 text-center"><i class="bi bi-plus-lg me-1"></i> Write New Article</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="ai-card h-100">
+                    <h5 style="font-family: 'Cinzel', serif; color: var(--gold); margin-bottom: 15px;"><i class="bi bi-tags-fill me-2"></i> Category Distribution</h5>
+                    {% for cat, count in category_counts.items %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
+                            <span>{{ cat }}</span>
+                            <span style="color: var(--gold);">{{ count }} article{{ count|pluralize }}</span>
+                        </div>
+                        <div class="progress" style="height: 6px; background: #222;">
+                            <div class="progress-bar" style="width: {% widthratio count total_published 100 %}%; background: var(--gold);"></div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p style="color: var(--desert); font-style: italic;">No articles published yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Performing Posts -->
+        <div class="ai-card">
+            <h5 style="font-family: 'Cinzel', serif; color: var(--gold); margin-bottom: 15px;"><i class="bi bi-trophy-fill me-2 text-warning"></i> Top Performing Articles</h5>
+
+            
+            <div class="table-responsive">
+                <table class="table table-dark table-hover" style="background: transparent;">
+                    <thead>
+                        <tr style="border-bottom: 1.5px solid var(--gold); color: var(--gold); font-size: 0.88rem;">
+                            <th>Article Title</th>
+                            <th>Category</th>
+                            <th class="text-center">Views</th>
+                            <th class="text-center">Likes</th>
+                            <th class="text-center">Comments</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for post in top_posts %}
+                        <tr style="font-size: 0.9rem; border-bottom: 1px solid rgba(212,175,55,0.2);">
+                            <td>
+                                <strong>{{ post.title | truncatewords:7 }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge" style="background: rgba(212,175,55,0.2); color: var(--gold);">{{ post.category }}</span>
+                            </td>
+                            <td class="text-center" style="color: var(--turquoise);">{{ post.views_count }}</td>
+                            <td class="text-center" style="color: #ff6b6b;">{{ post.total_likes }}</td>
+                            <td class="text-center">{{ post.total_comments }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'read-post' post.id %}" class="btn btn-sm btn-primary" style="padding: 2px 8px; font-size: 0.75rem;">View</a>
+                                <a href="{% url 'update-post' post.id %}" class="btn btn-sm" style="border: 1px solid var(--gold); color: var(--sand); padding: 2px 8px; font-size: 0.75rem;">Edit</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-3" style="color: var(--desert);">
+                                Publish your first post to see reader analytics!
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

@@ -3,62 +3,250 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+    
+    <!-- OpenGraph / Twitter Social Meta Tags -->
+    {% block meta_tags %}
+    <meta property="og:title" content="Posty - Ancient Egyptian Elegance Meets Modern AI Publishing">
+    <meta property="og:description" content="Discover, read, and write captivating stories powered by cutting-edge AI.">
+    <meta property="og:image" content="{% static 'images/logo.png' %}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    {% endblock meta_tags %}
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <!-- Professional Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'style.css' %}?v=4.8">
     {% block title %}
     {% endblock title %}
+
+
+
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark">
-  <div class="container-fluid px-4">
+<!-- Reading Progress Bar -->
+<div id="readingProgressBar" class="reading-progress-bar"></div>
+
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+  <div class="container-fluid px-3 px-lg-4">
+    <!-- Brand -->
     <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
-        <img src="{% static 'images/logo.png' %}" height="45px" width="45px" alt="LOGO" style="border-radius: 50%; border: 1px solid var(--gold); margin-right: 15px; object-fit: cover;">
-        <span style="font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.4rem; font-weight: bold; letter-spacing: 2px;">POSTY</span>
+        <img src="{% static 'images/logo.png' %}" height="38" width="38" alt="LOGO">
+        <span>POSTY</span>
     </a>
     
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation" style="border-color: var(--gold);">
-      <span class="navbar-toggler-icon"></span>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation" style="border: 1px solid rgba(212,175,55,0.5); padding: 4px 8px;">
+      <span class="navbar-toggler-icon" style="filter: invert(80%) sepia(50%) saturate(1000%) hue-rotate(5deg);"></span>
     </button>
     
     <div class="collapse navbar-collapse" id="navbarNav">
-      <!-- Left side: Main Navigation -->
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0" style="margin-left: 20px;">
+      <!-- Main Links -->
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">Home</a>
+          <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">
+            <i class="bi bi-house-door me-1"></i> Home
+          </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.url_name == 'display-post' %}active{% endif %}" href="{% url 'display-post' %}">Feed</a>
+          <a class="nav-link {% if request.resolver_match.url_name == 'display-post' %}active{% endif %}" href="{% url 'display-post' %}">
+            <i class="bi bi-compass me-1"></i> Explore
+          </a>
         </li>
-      </ul>
-      
-      <!-- Right side: Authentication & Actions -->
-      <ul class="navbar-nav ms-auto align-items-center gap-3">
         {% if request.user.is_authenticated %}
-            <li class="nav-item d-none d-lg-block">
-                <span style="color: var(--sand); font-style: italic; margin-right: 15px;">Welcome, {{ request.user.username }}</span>
-            </li>
-            <li class="nav-item">
-                <a href="{% url 'add-post' %}" class="btn" style="background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 6px 16px; font-size: 0.9rem;">+ Write Post</a>
-            </li>
-            <li class="nav-item">
-                <a href="{% url 'logout' %}" class="btn btn-danger" style="padding: 6px 16px; font-size: 0.9rem;">Logout</a>
-            </li>
-        {% else %}
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'login' %}">Login</a>
-            </li>
-            <li class="nav-item">
-                <a href="{% url 'register' %}" class="btn btn-primary" style="padding: 6px 16px; font-size: 0.9rem; color: black;">Sign Up</a>
-            </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'saved-posts' %}active{% endif %}" href="{% url 'saved-posts' %}">
+            <i class="bi bi-bookmark me-1"></i> Saved
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'drafts' %}active{% endif %}" href="{% url 'drafts' %}">
+            <i class="bi bi-file-earmark-text me-1"></i> Drafts
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}" href="{% url 'analytics' %}">
+            <i class="bi bi-bar-chart-line me-1"></i> Analytics
+          </a>
+        </li>
         {% endif %}
       </ul>
+      
+      <!-- Right Side Actions (Desktop & Tablet) -->
+      <div class="d-flex align-items-center flex-wrap gap-2 mt-3 mt-lg-0 justify-content-between justify-content-lg-end">
+        <!-- Desktop Theme Dropdown -->
+        <div class="dropdown d-none d-lg-block">
+          <button class="btn btn-sm dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="background: rgba(20,20,20,0.8); color: var(--gold); border: 1px solid rgba(212,175,55,0.4); border-radius: 6px; padding: 5px 12px; font-size: 0.85rem;">
+            <i id="currentThemeIcon" class="bi bi-circle-half"></i> <span id="currentThemeName">Theme</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" style="background: #141414; border: 1px solid var(--gold); font-size: 0.88rem; min-width: 190px;">
+            <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="setAppTheme('theme-pharaoh', 'bi-moon-stars-fill', 'Pharaoh Night')"><i class="bi bi-moon-stars-fill text-warning me-2"></i> Pharaoh Night</a></li>
+            <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="setAppTheme('theme-desert', 'bi-sun-fill', 'Desert Sand')"><i class="bi bi-sun-fill text-warning me-2"></i> Desert Sand</a></li>
+            <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="setAppTheme('theme-lapis', 'bi-gem', 'Lapis Cyber')"><i class="bi bi-gem text-info me-2"></i> Lapis Cyber</a></li>
+            <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="setAppTheme('theme-oasis', 'bi-brightness-high', 'Oasis Light')"><i class="bi bi-brightness-high text-warning me-2"></i> Oasis Light</a></li>
+          </ul>
+        </div>
+
+        {% if request.user.is_authenticated %}
+            <a href="{% url 'author-profile' request.user.username %}" class="user-profile-badge">
+                <img src="{{ request.user.profile.get_avatar }}" alt="Avatar" width="22" height="22" class="rounded-circle me-1" style="border: 1px solid var(--gold); object-fit: cover;">
+                <span>{{ request.user.username }}</span>
+            </a>
+            
+            <a href="{% url 'add-post' %}" class="btn btn-sm btn-primary nav-action-btn" style="color: #000; font-weight: 600;">
+                <i class="bi bi-pencil-square"></i> <span>Write</span>
+            </a>
+            
+            <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger" style="padding: 5px 10px; font-size: 0.85rem; border-radius: 6px;" title="Log Out">
+                <i class="bi bi-box-arrow-right"></i>
+            </a>
+        {% else %}
+            <a class="btn btn-sm" href="{% url 'login' %}" style="color: var(--sand); border: 1px solid rgba(212,175,55,0.4); padding: 5px 14px; font-size: 0.85rem;">Login</a>
+            <a href="{% url 'register' %}" class="btn btn-sm btn-primary" style="padding: 5px 16px; font-size: 0.85rem; color: #000; font-weight: 600;">Sign Up</a>
+        {% endif %}
+      </div>
+
+      <!-- Mobile & Tablet Theme Selector Bar -->
+      <div class="d-lg-none mt-3 pt-3" style="border-top: 1px dashed rgba(212,175,55,0.3);">
+        <span style="font-size: 0.78rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">
+            <i class="bi bi-palette me-1"></i> Choose Theme:
+        </span>
+        <div class="row row-cols-2 g-2">
+            <div class="col">
+                <button type="button" class="btn btn-sm w-100 theme-mobile-btn" onclick="setAppTheme('theme-pharaoh', 'bi-moon-stars-fill', 'Pharaoh Night')">
+                    <i class="bi bi-moon-stars-fill text-warning me-1"></i> Pharaoh
+                </button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-sm w-100 theme-mobile-btn" onclick="setAppTheme('theme-desert', 'bi-sun-fill', 'Desert Sand')">
+                    <i class="bi bi-sun-fill text-warning me-1"></i> Desert
+                </button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-sm w-100 theme-mobile-btn" onclick="setAppTheme('theme-lapis', 'bi-gem', 'Lapis Cyber')">
+                    <i class="bi bi-gem text-info me-1"></i> Lapis
+                </button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-sm w-100 theme-mobile-btn" onclick="setAppTheme('theme-oasis', 'bi-brightness-high', 'Oasis Light')">
+                    <i class="bi bi-brightness-high text-warning me-1"></i> Oasis
+                </button>
+            </div>
+        </div>
+      </div>
     </div>
   </div>
 </nav>
 
+
+
+    <!-- Global Floating Toast Container -->
+    <div id="postyToastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;"></div>
+
     {% block content %}
     {% endblock content %}
+
+    <footer class="mt-5">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-family: 'Cinzel', serif; color: var(--gold); font-weight: bold;">POSTY</span>
+                    <span style="color: var(--desert); font-size: 0.85rem;">&bull; Modern AI Publishing Platform</span>
+                </div>
+                <div class="d-flex gap-3 align-items-center">
+                    <a href="{% url 'display-post' %}"><i class="bi bi-compass me-1"></i> Feed</a>
+                    <a href="{% url 'post-feed' %}" target="_blank"><i class="bi bi-rss me-1"></i> RSS</a>
+                    <a href="{% url 'home' %}"><i class="bi bi-house me-1"></i> Home</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <script>
+    // Theme Engine
+    function setAppTheme(themeClass, iconClass, name) {
+        document.body.classList.remove('theme-desert', 'theme-lapis', 'theme-oasis');
+        if (themeClass !== 'theme-pharaoh') {
+            document.body.classList.add(themeClass);
+        }
+        localStorage.setItem('posty_theme', themeClass);
+        localStorage.setItem('posty_theme_icon', iconClass);
+        localStorage.setItem('posty_theme_name', name);
+        const iconEl = document.getElementById('currentThemeIcon');
+        const nameEl = document.getElementById('currentThemeName');
+        if (iconEl) {
+            iconEl.className = 'bi ' + iconClass;
+        }
+        if (nameEl) nameEl.innerText = name;
+        showToast(`Theme switched to ${name}!`, 'info');
+    }
+
+    // Initialize saved theme on load
+    (function initTheme() {
+        const savedTheme = localStorage.getItem('posty_theme');
+        const savedIcon = localStorage.getItem('posty_theme_icon') || 'bi-moon-stars-fill';
+        const savedName = localStorage.getItem('posty_theme_name') || 'Pharaoh';
+        if (savedTheme && savedTheme !== 'theme-pharaoh') {
+            document.body.classList.add(savedTheme);
+        }
+        const iconEl = document.getElementById('currentThemeIcon');
+        const nameEl = document.getElementById('currentThemeName');
+        if (iconEl) {
+            if (savedIcon.startsWith('bi-')) {
+                iconEl.className = 'bi ' + savedIcon;
+            } else {
+                iconEl.className = 'bi bi-circle-half';
+            }
+        }
+        if (nameEl) nameEl.innerText = savedName;
+    })();
+
+    // Scroll progress bar
+    window.addEventListener('scroll', () => {
+        const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / (height || 1)) * 100;
+        const bar = document.getElementById('readingProgressBar');
+        if (bar) bar.style.width = scrolled + '%';
+    });
+
+    // Global Toast Notification Helper
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('postyToastContainer');
+        if (!container) return;
+
+        const toastId = 'toast_' + Date.now();
+        const icon = type === 'success' ? '<i class="bi bi-check-circle-fill text-warning me-2"></i>' : 
+                     (type === 'error' ? '<i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>' : '<i class="bi bi-info-circle-fill text-info me-2"></i>');
+        const borderColor = type === 'success' ? 'var(--gold)' : (type === 'error' ? 'var(--danger)' : 'var(--turquoise)');
+
+        const toastEl = document.createElement('div');
+        toastEl.id = toastId;
+        toastEl.className = 'toast align-items-center text-white show';
+        toastEl.style.background = 'rgba(15, 15, 15, 0.96)';
+        toastEl.style.border = `1.5px solid ${borderColor}`;
+        toastEl.style.boxShadow = `0 0 20px rgba(0, 0, 0, 0.8)`;
+        toastEl.style.borderRadius = '8px';
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+
+        toastEl.innerHTML = `
+            <div class="d-flex p-3 align-items-center">
+                <span class="fs-5">${icon}</span>
+                <div class="toast-body p-0 flex-grow-1" style="color: var(--sand); font-size: 0.92rem;">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-2" onclick="this.closest('.toast').remove()"></button>
+            </div>
+        `;
+        container.appendChild(toastEl);
+        setTimeout(() => { toastEl.remove(); }, 4000);
+    }
+    </script>
+
+
 </body>
-</html>
+</html>

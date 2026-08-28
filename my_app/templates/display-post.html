@@ -1,24 +1,129 @@
 {% extends 'base.html' %}
 {% block title %}
-    <title>Posts</title>
+    <title>Explore Feed - Posty</title>
 {% endblock title %}
 {% block content %}
-    <h1>Posts</h1>
+    <h1>Community Feed</h1>
     <hr>
-    <div style="width: 100%; height: 100%;">
-    {% for post in posts %}
-    <div class="card" style="width: 40rem; margin: 10px auto;">
-  <img src="{{ post.image.url }}" class="card-img-top" alt="image">
-  <div class="card-body">
-<h5 class="card-title">{{ post.title }}</h5>
-    <p class="card-text">{{ post.content | linebreaks }}</p>
-    <p class="card-text">{{ post.subtitle | truncatechars:20 }}</p>
-    <p class="card-text">Author: {{ post.author }}</p>
-    <p class="card-text">Created at: {{ post.created_at }}</p>
-    <a href="{% url 'read-post' post.id %}" class="btn btn-primary">Read More</a>
-  </div>
-</div>
-        
-   {% endfor %}
-   </div>
+    
+    <div style="max-width: 52rem; margin: 20px auto 60px auto; padding: 0 15px;">
+        <!-- Search & Filter Bar -->
+        <div class="p-3 mb-4" style="background: rgba(15,15,15,0.92); border: 1.5px solid var(--gold); border-radius: 12px; box-shadow: 0 0 20px rgba(212,175,55,0.25);">
+            <form method="get" action="{% url 'display-post' %}" class="m-0 p-0" style="width: 100%; background: transparent; border: none; box-shadow: none;">
+                <div class="input-group mb-3">
+                    <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search by title, story, keywords, or author..." 
+                           style="background: #181818; color: var(--sand); border: 1.5px solid var(--gold-dark);">
+                    {% if selected_category and selected_category != 'All' %}
+                    <input type="hidden" name="category" value="{{ selected_category }}">
+                    {% endif %}
+                    <button class="ai-btn ai-btn-gold" type="submit"><i class="bi bi-search me-1"></i> Search</button>
+                    {% if query or selected_category != 'All' %}
+                    <a href="{% url 'display-post' %}" class="btn" style="border: 1px solid var(--danger); color: #ff6b6b;"><i class="bi bi-x-circle me-1"></i> Reset</a>
+                    {% endif %}
+                </div>
+            </form>
+
+            <!-- Category Filter Pills -->
+            <div class="d-flex align-items-center gap-2 flex-wrap pt-2" style="border-top: 1px dashed rgba(212,175,55,0.3);">
+                <span style="font-size: 0.82rem; color: var(--gold);"><i class="bi bi-tags me-1"></i> Categories:</span>
+                {% for cat in categories %}
+                <a href="{% url 'display-post' %}?{% if query %}q={{ query }}&{% endif %}category={{ cat }}" 
+                   class="ai-tool-pill text-decoration-none {% if selected_category == cat %}active{% endif %}"
+                   style="{% if selected_category == cat %}background: var(--gold); color: #000; font-weight: bold;{% endif %}">
+                   {{ cat }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if query %}
+        <p class="mb-4" style="color: var(--desert); font-size: 0.95rem;">
+            Showing results for <strong>"{{ query }}"</strong> ({{ total_count }} found)
+        </p>
+        {% endif %}
+
+        <!-- Posts List -->
+        {% for post in posts %}
+        <div class="card mb-4" style="overflow: hidden;">
+            {% if post.get_image_url %}
+            <img src="{{ post.get_image_url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 320px; object-fit: cover;">
+            {% endif %}
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge" style="background: rgba(212,175,55,0.2); border: 1px solid var(--gold); color: var(--gold); padding: 4px 10px; font-size: 0.8rem;">
+                            <i class="bi bi-tag-fill me-1"></i> {{ post.category }}
+                        </span>
+                        <a href="{% url 'author-profile' post.author.username %}" class="d-flex align-items-center text-decoration-none" style="color: var(--sand);">
+                            <img src="{{ post.author.profile.get_avatar }}" alt="{{ post.author.username }}" width="24" height="24" class="rounded-circle me-1" style="border: 1px solid var(--gold); object-fit: cover;">
+                            <strong style="color: var(--sand); font-size: 0.88rem;">{{ post.author.username }}</strong>
+                        </a>
+                    </div>
+                    <span style="font-size: 0.82rem; color: var(--desert);"><i class="bi bi-calendar3 me-1"></i> {{ post.created_at|date:"M d, Y" }}</span>
+                </div>
+
+                <h3 class="card-title mt-2">{{ post.title }}</h3>
+                <p style="color: var(--turquoise); font-style: italic; font-size: 1rem;" class="mb-3">{{ post.subtitle }}</p>
+                <p class="card-text">{{ post.content | truncatewords:35 }}</p>
+
+                <!-- Post footer stats -->
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-3 flex-wrap gap-2" style="border-top: 1px dashed rgba(212,175,55,0.25);">
+                    <div class="d-flex align-items-center gap-3" style="font-size: 0.85rem; color: var(--desert);">
+                        <span><i class="bi bi-eye me-1"></i> {{ post.views_count }} views</span>
+                        <span><i class="bi bi-heart me-1"></i> {{ post.total_likes }} likes</span>
+                        <span><i class="bi bi-chat-left-text me-1"></i> {{ post.total_comments }} comments</span>
+                    </div>
+                    <a href="{% url 'read-post' post.id %}" class="btn btn-primary btn-sm px-3">Read Article <i class="bi bi-arrow-right ms-1"></i></a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5">
+            <p style="color: var(--desert); font-size: 1.2rem;">No posts found matching your query.</p>
+            <a href="{% url 'add-post' %}" class="btn btn-primary mt-2"><i class="bi bi-plus-lg me-1"></i> Write a Post</a>
+        </div>
+        {% endfor %}
+
+
+        <!-- Pagination Controls -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-5">
+            <ul class="pagination justify-content-center gap-1">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" style="background: #181818; color: var(--gold); border: 1px solid var(--gold);" 
+                       href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">
+                        ← Previous
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link" style="background: var(--gold); color: #000; border: 1px solid var(--gold); font-weight: bold;">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" style="background: #181818; color: var(--sand); border: 1px solid rgba(212,175,55,0.4);" 
+                           href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" style="background: #181818; color: var(--gold); border: 1px solid var(--gold);" 
+                       href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">
+                        Next →
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
 {% endblock content %}
+

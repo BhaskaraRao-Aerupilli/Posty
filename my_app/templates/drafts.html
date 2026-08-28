@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}
+    <title>My Drafts - Posty</title>
+{% endblock title %}
+{% block content %}
+    <h1>Unpublished Drafts</h1>
+    <hr>
+
+    <div style="max-width: 50rem; margin: 20px auto 60px auto; padding: 0 15px;">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <span style="color: var(--desert);">These articles are saved privately and are only visible to you.</span>
+            <a href="{% url 'add-post' %}" class="ai-btn"><i class="bi bi-plus-lg me-1"></i> New Article</a>
+        </div>
+
+        {% for post in drafts %}
+        <div class="card mb-4" style="border: 1.5px dashed var(--gold); background: rgba(15,15,15,0.95); overflow: hidden;">
+            {% if post.get_image_url %}
+            <img src="{{ post.get_image_url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 240px; object-fit: cover; opacity: 0.85;">
+            {% endif %}
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge" style="background: rgba(255,193,7,0.2); border: 1px solid #ffc107; color: #ffc107; padding: 4px 10px; font-size: 0.8rem;">
+                        <i class="bi bi-lock me-1"></i> Private Draft &bull; {{ post.category }}
+                    </span>
+                    <span style="font-size: 0.82rem; color: var(--desert);"><i class="bi bi-clock me-1"></i> Last edited {{ post.updated_at|date:"M d, Y" }}</span>
+                </div>
+                
+                <h3 class="card-title mt-2">{{ post.title|default:"(Untitled Draft)" }}</h3>
+                <p style="color: var(--turquoise); font-style: italic; font-size: 0.95rem;">{{ post.subtitle|default:"No subtitle added yet" }}</p>
+                <p class="card-text">{{ post.content | truncatewords:25 }}</p>
+
+                <div class="d-flex gap-2 justify-content-end mt-3 pt-3" style="border-top: 1px dashed rgba(212,175,55,0.25);">
+                    <a href="{% url 'read-post' post.id %}" class="btn" style="border: 1px solid var(--turquoise); color: var(--turquoise); font-size: 0.88rem;">
+                        <i class="bi bi-eye me-1"></i> Preview
+                    </a>
+                    <a href="{% url 'update-post' post.id %}" class="btn btn-primary btn-sm px-3" style="font-size: 0.88rem;">
+                        <i class="bi bi-pencil-square me-1"></i> Edit & Publish
+                    </a>
+                    <a href="{% url 'delete-post' post.id %}" class="btn btn-danger btn-sm" style="font-size: 0.88rem;">
+                        <i class="bi bi-trash3 me-1"></i> Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5">
+            <i class="bi bi-journal-x fs-1 text-warning d-block mb-3"></i>
+            <h4 style="color: var(--gold); font-family: 'Cinzel', serif;">No Drafts Saved</h4>
+            <p style="color: var(--desert); font-size: 1.05rem;">You don't have any unpublished drafts right now.</p>
+            <a href="{% url 'add-post' %}" class="btn btn-primary mt-2"><i class="bi bi-plus-lg me-1"></i> Start Writing</a>
+        </div>
+        {% endfor %}
+    </div>
+
+{% endblock content %}
