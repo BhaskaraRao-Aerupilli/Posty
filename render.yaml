@@ -2,9 +2,10 @@ services:
   - type: web
     name: posty-app
     env: python
-    buildCommand: "./build.sh"
+    buildCommand: "bash build.sh"
     startCommand: "gunicorn myproject.wsgi:application"
     plan: free
+
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
