@@ -95,27 +95,44 @@
                     </div>
                 </div>
 
-                <!-- AI Audio Player (Text-to-Speech) -->
+                <!-- AI Natural Human Audio Narration Player -->
                 <div class="p-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3" 
-                     style="background: rgba(26, 42, 108, 0.35); border: 1px solid var(--turquoise); border-radius: 10px;">
+                     style="background: linear-gradient(135deg, rgba(26, 42, 108, 0.4), rgba(15, 15, 15, 0.95)); border: 1.5px solid var(--turquoise); border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 180, 216, 0.15);">
                     <div class="d-flex align-items-center gap-3">
-                        <i class="bi bi-headphones fs-3 text-info"></i>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-headphones fs-3 text-info"></i>
+                            <div id="audioWaveBars" class="audio-wave-anim ms-2" style="display: none;">
+                                <span></span><span></span><span></span><span></span>
+                            </div>
+                        </div>
                         <div>
-                            <strong style="color: var(--sand); font-size: 0.95rem;">Audio Narration</strong>
-                            <p class="mb-0" id="ttsStatus" style="font-size: 0.78rem; color: var(--turquoise);">Voice narration ready</p>
+                            <strong style="color: var(--sand); font-size: 0.95rem;">Natural Human Narration</strong>
+                            <p class="mb-0" id="ttsStatus" style="font-size: 0.78rem; color: var(--turquoise);">Select voice & listen</p>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <!-- Voice Selector -->
+                        <select id="ttsVoiceSelect" class="form-select form-select-sm m-0" style="width: auto; max-width: 175px; background: #141414; color: var(--sand); border: 1px solid var(--turquoise); font-size: 0.8rem;" onchange="changeTtsVoice()" title="Choose Voice">
+                            <option value="">✨ Best Natural Voice</option>
+                        </select>
+
+                        <!-- Speed Selector -->
+                        <select id="ttsSpeed" class="form-select form-select-sm m-0" style="width: auto; background: #141414; color: var(--sand); border: 1px solid var(--gold-dark); font-size: 0.8rem;" onchange="updateTtsSpeed()" title="Narration Speed">
+                            <option value="0.92">0.9x Warm</option>
+                            <option value="1.0" selected>1.0x Normal</option>
+                            <option value="1.15">1.15x Brisk</option>
+                            <option value="1.3">1.3x Fast</option>
+                        </select>
+
                         <button type="button" id="btnTtsPlay" class="ai-btn" style="padding: 6px 14px; font-size: 0.85rem;" onclick="toggleAudioNarration()">
                             <span id="ttsBtnLabel"><i class="bi bi-play-fill me-1"></i> Listen</span>
                         </button>
-                        <select id="ttsSpeed" class="form-select form-select-sm m-0" style="width: auto; background: #1b1b1b; color: var(--sand); border: 1px solid var(--gold-dark);" onchange="updateTtsSpeed()">
-                            <option value="1.0">1.0x Speed</option>
-                            <option value="1.25">1.25x Speed</option>
-                            <option value="1.5">1.5x Speed</option>
-                        </select>
+                        <button type="button" id="btnTtsStop" class="btn btn-sm btn-outline-danger" style="padding: 5px 10px; font-size: 0.85rem; display: none;" onclick="stopAudioNarration()" title="Stop Narration">
+                            <i class="bi bi-stop-fill"></i>
+                        </button>
                     </div>
                 </div>
+
 
                 <!-- Article Body -->
                 <div id="articleContentText" class="card-text" style="font-size: 1.1rem; line-height: 1.85; color: var(--sand);">
@@ -289,61 +306,198 @@
     const postId = {{ post.id }};
 
     // ==========================================
-    // 🎧 AI Audio Narration (TTS)
+    // 🎧 AI Natural Human Audio Narration (TTS)
     // ==========================================
     let synth = window.speechSynthesis;
     let utterance = null;
     let isPlaying = false;
+    let availableVoices = [];
+    let selectedVoice = null;
+
+    function populateVoices() {
+        if (!synth) return;
+        availableVoices = synth.getVoices();
+        const select = document.getElementById('ttsVoiceSelect');
+        if (!select) return;
+
+        select.innerHTML = '<option value="">✨ Best Natural Voice (Auto)</option>';
+
+        // Filter and sort English / Natural voices first
+        const naturalVoices = [];
+        const otherVoices = [];
+
+        availableVoices.forEach((voice, index) => {
+            const isNatural = /natural|neural|online|google|apple|premium|studio|jenny|guy|aria|samantha/i.test(voice.name);
+            const isEnglish = voice.lang.startsWith('en');
+
+            if (isEnglish || isNatural) {
+                naturalVoices.push({ voice, index, isNatural });
+            } else {
+                otherVoices.push({ voice, index, isNatural: false });
+            }
+        });
+
+        // Priority sort: Natural voices first
+        naturalVoices.sort((a, b) => (b.isNatural ? 1 : 0) - (a.isNatural ? 1 : 0));
+
+        naturalVoices.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.index;
+            const badge = item.isNatural ? '✨ Natural: ' : '🎙️ ';
+            opt.innerText = badge + item.voice.name.replace(/Microsoft |Google |English |United States|United Kingdom/gi, '').trim().substring(0, 24);
+            select.appendChild(opt);
+        });
+
+        // Auto-select the top natural voice
+        if (naturalVoices.length > 0) {
+            selectedVoice = naturalVoices[0].voice;
+        }
+    }
+
+    if (synth) {
+        populateVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = populateVoices;
+        }
+    }
+
+    function changeTtsVoice() {
+        const select = document.getElementById('ttsVoiceSelect');
+        const idx = select.value;
+        if (idx !== '' && availableVoices[idx]) {
+            selectedVoice = availableVoices[idx];
+        } else {
+            selectedVoice = null;
+        }
+        if (isPlaying) {
+            stopAudioNarration();
+            toggleAudioNarration();
+        }
+    }
+
+    function cleanTextForHumanSpeech(text) {
+        if (!text) return '';
+        return text
+            .replace(/https?:\/\/\S+/gi, '') // remove URLs
+            .replace(/#+\s*(.*?)\n/gi, '$1. ') // headings to full sentences
+            .replace(/\*\*(.*?)\*\*/gi, '$1') // bold
+            .replace(/\*(.*?)\*/gi, '$1') // italic
+            .replace(/`{1,3}[\s\S]*?`{1,3}/gi, '') // code blocks
+            .replace(/^\s*[-*]\s+/gim, ', ') // bullet points to natural pauses
+            .replace(/AI/g, 'A.I.')
+            .replace(/\be\.g\.\b/gi, 'for example')
+            .replace(/\bi\.e\.\b/gi, 'that is')
+            .replace(/\bvs\b/gi, 'versus')
+            .replace(/\n\s*\n/g, '. ') // paragraph pauses
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
 
     function toggleAudioNarration() {
         if (!synth) {
-            alert('Text-to-speech is not supported on your browser.');
+            showToast('Text-to-speech is not supported on this browser.', 'error');
             return;
         }
 
-        const btn = document.getElementById('btnTtsPlay');
         const btnLabel = document.getElementById('ttsBtnLabel');
         const status = document.getElementById('ttsStatus');
+        const waveBars = document.getElementById('audioWaveBars');
+        const stopBtn = document.getElementById('btnTtsStop');
 
         if (isPlaying) {
             if (synth.speaking && !synth.paused) {
                 synth.pause();
                 isPlaying = false;
-                btnLabel.innerText = '▶️ Resume Audio';
-                status.innerText = 'Paused';
+                if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Resume';
+                if (status) status.innerText = 'Narration paused';
+                if (waveBars) waveBars.style.display = 'none';
             }
         } else {
             if (synth.paused) {
                 synth.resume();
                 isPlaying = true;
-                btnLabel.innerText = '⏸️ Pause Audio';
-                status.innerText = 'Playing narration...';
+                if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pause';
+                if (status) status.innerText = 'Speaking narration...';
+                if (waveBars) waveBars.style.display = 'inline-flex';
+                if (stopBtn) stopBtn.style.display = 'inline-block';
             } else {
                 synth.cancel();
-                const textToRead = `Article: {{ post.title }}. {{ post.subtitle }}. ` + document.getElementById('articleContentText').innerText;
-                utterance = new SpeechSynthesisUtterance(textToRead);
-                utterance.rate = parseFloat(document.getElementById('ttsSpeed').value) || 1.0;
+                
+                const rawTitle = "{{ post.title|escapejs }}";
+                const rawSubtitle = "{{ post.subtitle|escapejs }}";
+                const rawContent = document.getElementById('articleContentText') ? document.getElementById('articleContentText').innerText : '';
+
+                const cleanNarration = cleanTextForHumanSpeech(`${rawTitle}. ${rawSubtitle}. ${rawContent}`);
+                
+                utterance = new SpeechSynthesisUtterance(cleanNarration);
+                
+                // Set voice
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                } else if (availableVoices.length > 0) {
+                    const natural = availableVoices.find(v => /natural|neural|online|google|apple|jenny|guy/i.test(v.name) && v.lang.startsWith('en'));
+                    if (natural) utterance.voice = natural;
+                }
+
+                // Natural human voice parameters
+                const speedVal = parseFloat(document.getElementById('ttsSpeed').value) || 1.0;
+                utterance.rate = speedVal;
+                utterance.pitch = 1.02; // Warm conversational pitch
+
+                utterance.onstart = () => {
+                    isPlaying = true;
+                    if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pause';
+                    if (status) status.innerText = `Speaking (${utterance.voice ? utterance.voice.name.substring(0, 20) : 'Natural Voice'})...`;
+                    if (waveBars) waveBars.style.display = 'inline-flex';
+                    if (stopBtn) stopBtn.style.display = 'inline-block';
+                };
 
                 utterance.onend = () => {
                     isPlaying = false;
-                    btnLabel.innerText = '▶️ Play Audio';
-                    status.innerText = 'Finished narration';
+                    if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Listen';
+                    if (status) status.innerText = 'Finished narration';
+                    if (waveBars) waveBars.style.display = 'none';
+                    if (stopBtn) stopBtn.style.display = 'none';
+                };
+
+                utterance.onerror = (e) => {
+                    if (e.error !== 'interrupted' && e.error !== 'canceled') {
+                        showToast('Audio notice: ' + e.error, 'info');
+                    }
+                    isPlaying = false;
+                    if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Listen';
+                    if (waveBars) waveBars.style.display = 'none';
+                    if (stopBtn) stopBtn.style.display = 'none';
                 };
 
                 synth.speak(utterance);
-                isPlaying = true;
-                btnLabel.innerText = '⏸️ Pause Audio';
-                status.innerText = 'Playing narration...';
             }
         }
     }
 
+    function stopAudioNarration() {
+        if (synth) {
+            synth.cancel();
+        }
+        isPlaying = false;
+        const btnLabel = document.getElementById('ttsBtnLabel');
+        const status = document.getElementById('ttsStatus');
+        const waveBars = document.getElementById('audioWaveBars');
+        const stopBtn = document.getElementById('btnTtsStop');
+
+        if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Listen';
+        if (status) status.innerText = 'Narration stopped';
+        if (waveBars) waveBars.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'none';
+    }
+
     function updateTtsSpeed() {
-        if (isPlaying && utterance) {
-            toggleAudioNarration();
+        if (isPlaying) {
+            stopAudioNarration();
             toggleAudioNarration();
         }
     }
+
 
     // ==========================================
     // ❤️ Likes & 🔖 Bookmarks AJAX
