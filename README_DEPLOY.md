@@ -55,28 +55,8 @@ This repository includes a workflow that can trigger a Render deploy via the Ren
 
 Example: find the service id in the Render dashboard URL (it appears as a long alphanumeric id in the service settings). If you prefer, trigger deploys manually from Render instead of using this workflow.
 
-## Deploying to Heroku
-
-1. Create a Heroku app:
-   ```bash
-   heroku create
-   ```
-2. Push code to Heroku:
-   ```bash
-   git add .
-   git commit -m "Prepare Django deployment"
-   git push heroku main
-   ```
-3. Set Heroku environment variables:
-   ```bash
-   heroku config:set DJANGO_SECRET_KEY="<your-secret-key>" DJANGO_DEBUG=False DJANGO_ALLOWED_HOSTS="<your-app-name>.herokuapp.com"
-   ```
-4. Run migrations on Heroku:
-   ```bash
-   heroku run python manage.py migrate
-   ```
-
 ## Notes
 
-- This project uses SQLite by default, which is not ideal for production. For a production deployment, use PostgreSQL or another managed database.
-- Media uploads are stored in `media/`; configure an external file storage backend for durable production storage.
+- This project is fully configured for Render with persistent PostgreSQL support (`DATABASE_URL`).
+- Media uploads and live CDN images are served seamlessly in production.
+
