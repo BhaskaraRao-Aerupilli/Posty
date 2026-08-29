@@ -32,14 +32,15 @@ class Post(models.Model):
 
     @property
     def get_image_url(self):
+        if self.image_url:
+            return self.image_url
         if self.image:
             try:
                 return self.image.url
             except Exception:
                 pass
-        if self.image_url:
-            return self.image_url
         return ''
+
 
 
     @property

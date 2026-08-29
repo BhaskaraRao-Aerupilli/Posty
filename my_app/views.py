@@ -138,8 +138,8 @@ def add_post(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.author = request.user
-            if post.image_url and not request.FILES.get('image'):
-                image_search.download_image_to_field(post, post.image_url)
+            if request.FILES.get('image'):
+                post.image_url = ''
             post.save()
             return redirect('display-post')
         else:
@@ -159,12 +159,13 @@ def update_post(request, id):
         if form.is_valid():
             post = form.save(commit=False)
             post.updated_at = timezone.now()
-            if post.image_url and not request.FILES.get('image'):
-                image_search.download_image_to_field(post, post.image_url)
+            if request.FILES.get('image'):
+                post.image_url = ''
             post.save()
             return redirect('display-post')
         else:
             return render(request, 'update-post.html', {'form': form, 'post': post})
+
         
 
 def delete_post(request, id):
