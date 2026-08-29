@@ -6,12 +6,16 @@ from .models import Post, Comment, Profile, CATEGORY_CHOICES
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
+
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, IntegerField
+
+
 import json
 from . import ai_service
 from . import image_search
+
 
 
 def home(request):
@@ -75,15 +79,42 @@ def display_post(request):
 
     
     if query:
+        words = [w for w in query.split() if len(w) >= 2]
+        word_q = Q()
+        for w in words:
+            word_q |= (
+                Q(title__icontains=w) |
+                Q(subtitle__icontains=w) |
+                Q(category__icontains=w) |
+                Q(content__icontains=w) |
+                Q(author__username__icontains=w)
+            )
+            
         posts = posts.filter(
             Q(title__icontains=query) |
             Q(subtitle__icontains=query) |
+            Q(category__icontains=query) |
             Q(content__icontains=query) |
-            Q(author__username__icontains=query)
-        )
+            Q(author__username__icontains=query) |
+            word_q
+        ).distinct()
+
+        # Weighted relevance scoring: Exact Title > Subtitle > Category > Content
+        posts = posts.annotate(
+            relevance=Case(
+                When(title__icontains=query, then=Value(10)),
+                When(subtitle__icontains=query, then=Value(7)),
+                When(category__icontains=query, then=Value(6)),
+                When(content__icontains=query, then=Value(3)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        ).order_by('-relevance', '-created_at')
+
         
     if selected_category and selected_category != 'All':
         posts = posts.filter(category=selected_category)
+
         
     paginator = Paginator(posts, 6)
     page_number = request.GET.get('page')

@@ -83,21 +83,21 @@ def search_web_images(query: str, limit: int = 12) -> list:
         except Exception:
             pass
 
-    # 3. High quality Unsplash curated photo URLs matching topic
+    # 3. Dynamic Topic-Specific AI Artwork & Photography
     if len(results) < limit:
-        keywords = clean_query.replace(" ", ",")
-        for i in range(1, 4):
-            unsplash_url = f"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80&sig={i}&kw={urllib.parse.quote(keywords)}"
-            if unsplash_url not in seen_urls:
-                seen_urls.add(unsplash_url)
-                results.append({
-                    "url": unsplash_url,
-                    "thumb": unsplash_url,
-                    "title": f"{clean_query} Photo {i}",
-                    "source": "Unsplash HD"
-                })
+        # Generate custom photorealistic concept for the exact search query
+        ai_artwork = generate_ai_artwork(f"Photorealistic 8k cinematic image of {clean_query}")
+        if ai_artwork["url"] not in seen_urls:
+            seen_urls.add(ai_artwork["url"])
+            results.append({
+                "url": ai_artwork["url"],
+                "thumb": ai_artwork["thumb"],
+                "title": f"AI Concept: {clean_query.title()}",
+                "source": "AI Generated Art"
+            })
 
     return results
+
 
 
 def download_image_to_field(post_instance, image_url: str):
