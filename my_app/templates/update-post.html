@@ -54,10 +54,15 @@
                 </div>
 
                 <div class="mb-2">
+                    <label class="form-label" style="font-size: 0.85rem; color: var(--sand);"><i class="bi bi-upload me-1"></i> Upload Image File:</label>
                     {{ form.image }}
                 </div>
-                <input type="hidden" name="image_url" id="id_image_url" value="{{ post.image_url|default:'' }}">
+                <div class="mt-2">
+                    <label class="form-label" style="font-size: 0.85rem; color: var(--sand);"><i class="bi bi-link-45deg me-1"></i> Or Image URL (Web or AI):</label>
+                    <input type="text" name="image_url" id="id_image_url" class="form-control form-control-sm" value="{{ post.image_url|default:'' }}" placeholder="Paste image URL (https://...) or select Web Images / AI Artwork above" oninput="onImageUrlInput(this.value)">
+                </div>
             </div>
+
 
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
@@ -161,6 +166,19 @@
         document.getElementById('imagePreviewContainer').style.display = 'none';
         document.getElementById('imagePreviewImg').src = '';
     }
+
+    function onImageUrlInput(val) {
+        val = (val || '').trim();
+        if (val && val.startsWith('http')) {
+            const preview = document.getElementById('imagePreviewImg');
+            const container = document.getElementById('imagePreviewContainer');
+            const label = document.getElementById('imageSourceLabel');
+            preview.src = val;
+            label.innerText = '🌐 Direct Image URL Attached';
+            container.style.display = 'block';
+        }
+    }
+
 
     function prepareImageSearchModal() {
         const title = document.getElementById('id_title').value.trim();

@@ -17,86 +17,75 @@ def search_web_images(query: str, limit: int = 12) -> list:
     results = []
     seen_urls = set()
 
-    # 1. Live Web Search (Bing/Web image index)
-    try:
-        url = f"https://www.bing.com/images/search?q={urllib.parse.quote(clean_query)}&form=HDRSC2&first=1"
-        headers = {"User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
-        resp = requests.get(url, headers=headers, timeout=6)
-        if resp.status_code == 200:
-            # Find m="{...}" metadata blocks containing murl (full image) and turl (thumbnail)
-            matches = re.findall(r'm="(\{.*?\})"', resp.text)
-            for m in matches:
-                try:
-                    data = json.loads(html.unescape(m))
-                    img_url = data.get("murl")
-                    thumb_url = data.get("turl") or img_url
-                    title = data.get("t") or clean_query
+    blocked_domains = ("ytimg.com", "pinimg.com", "instagram.com", "fbcdn.net", "tiktok.com", "wp.com/v/t")
 
-                    if img_url and img_url.startswith("http") and img_url not in seen_urls:
-                        seen_urls.add(img_url)
-                        results.append({
-                            "url": img_url,
-                            "thumb": thumb_url,
-                            "title": title,
-                            "source": "Web / Google Images"
-                        })
-                        if len(results) >= limit:
-                            break
-                except Exception:
-                    continue
-    except Exception as e:
+    # 1. Wikimedia Commons API (Fast, 100% free, direct CDN images, no hotlink block)
+    try:
+        commons_url = f"https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch={urllib.parse.quote(clean_query)}&gsrlimit=8&prop=imageinfo&iiprop=url|thumburl&iiurlwidth=800&format=json"
+        commons_resp = requests.get(commons_url, headers={"User-Agent": "PostyApp/1.0 (contact@posty.local)"}, timeout=4)
+        if commons_resp.status_code == 200:
+            pages = commons_resp.json().get("query", {}).get("pages", {})
+            for page in pages.values():
+                info = page.get("imageinfo", [{}])[0]
+                img_url = info.get("thumburl") or info.get("url")
+                if img_url and img_url.startswith("http") and img_url not in seen_urls:
+                    seen_urls.add(img_url)
+                    raw_title = page.get("title", clean_query).replace("File:", "").replace(".jpg", "").replace(".png", "")
+                    results.append({
+                        "url": img_url,
+                        "thumb": img_url,
+                        "title": raw_title[:45],
+                        "source": "Wikimedia Commons"
+                    })
+                    if len(results) >= limit:
+                        break
+    except Exception:
         pass
 
-    # 2. Wikipedia / Wikimedia Commons API
+    # 2. Live Web Search (Bing/Web image index with hotlink protection filter)
     if len(results) < limit:
         try:
-            wiki_url = "https://en.wikipedia.org/w/api.php"
-            params = {
-                "action": "query",
-                "format": "json",
-                "generator": "search",
-                "gsrsearch": clean_query,
-                "gsrlimit": 8,
-                "prop": "pageimages",
-                "piprop": "thumbnail|original",
-                "pithumbsize": 500,
-            }
-            wiki_headers = {"User-Agent": "PostyApp/1.0 (contact@posty.local)"}
-            wiki_resp = requests.get(wiki_url, params=params, headers=wiki_headers, timeout=5)
-            if wiki_resp.status_code == 200:
-                pages = wiki_resp.json().get("query", {}).get("pages", {})
-                for page in pages.values():
-                    if "original" in page:
-                        orig = page["original"]["source"]
-                        thumb = page.get("thumbnail", {}).get("source", orig)
-                        title = page.get("title", clean_query)
-                        if orig and orig not in seen_urls:
-                            seen_urls.add(orig)
+            url = f"https://www.bing.com/images/search?q={urllib.parse.quote(clean_query)}&form=HDRSC2&first=1"
+            headers = {"User-Agent": USER_AGENT, "Accept-Language": "en-US,en;q=0.9"}
+            resp = requests.get(url, headers=headers, timeout=5)
+            if resp.status_code == 200:
+                matches = re.findall(r'm="(\{.*?\})"', resp.text)
+                for m in matches:
+                    try:
+                        data = json.loads(html.unescape(m))
+                        img_url = data.get("murl")
+                        thumb_url = data.get("turl") or img_url
+                        title = data.get("t") or clean_query
+
+                        if img_url and img_url.startswith("http") and not any(b in img_url for b in blocked_domains) and img_url not in seen_urls:
+                            seen_urls.add(img_url)
                             results.append({
-                                "url": orig,
-                                "thumb": thumb,
-                                "title": title,
-                                "source": "Wikimedia Commons"
+                                "url": img_url,
+                                "thumb": thumb_url,
+                                "title": title[:50],
+                                "source": "Web Images"
                             })
                             if len(results) >= limit:
                                 break
+                    except Exception:
+                        continue
         except Exception:
             pass
 
-    # 3. Dynamic Topic-Specific AI Artwork & Photography
+    # 3. Dynamic Topic-Specific AI Artwork
     if len(results) < limit:
-        # Generate custom photorealistic concept for the exact search query
-        ai_artwork = generate_ai_artwork(f"Photorealistic 8k cinematic image of {clean_query}")
+        ai_artwork = generate_ai_artwork(f"Cinematic photorealistic 8k image of {clean_query}")
         if ai_artwork["url"] not in seen_urls:
             seen_urls.add(ai_artwork["url"])
             results.append({
                 "url": ai_artwork["url"],
                 "thumb": ai_artwork["thumb"],
-                "title": f"AI Concept: {clean_query.title()}",
-                "source": "AI Generated Art"
+                "title": f"AI Art: {clean_query.title()}",
+                "source": "Posty Generative Art"
             })
 
     return results
+
 
 
 

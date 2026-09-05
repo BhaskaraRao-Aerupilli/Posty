@@ -32,14 +32,29 @@ class Post(models.Model):
 
     @property
     def get_image_url(self):
-        if self.image_url:
-            return self.image_url
+        # 1. Direct Web/AI image URL
+        if self.image_url and self.image_url.strip():
+            return self.image_url.strip()
+
+        # 2. Local uploaded file (verify file actually exists on server disk)
         if self.image:
             try:
-                return self.image.url
+                if self.image.storage.exists(self.image.name):
+                    return self.image.url
             except Exception:
                 pass
-        return ''
+
+        # 3. Guaranteed High-Resolution Category Editorial Fallback
+        category_defaults = {
+            'Technology': 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+            'Design': 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80',
+            'AI & ML': 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&q=80',
+            'Business': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80',
+            'Culture': 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80',
+            'General': 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80',
+        }
+        return category_defaults.get(self.category, 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80')
+
 
 
 
