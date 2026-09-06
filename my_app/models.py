@@ -36,13 +36,15 @@ class Post(models.Model):
         if self.image_url and self.image_url.strip():
             return self.image_url.strip()
 
-        # 2. Local uploaded file (verify file actually exists on server disk)
+        # 2. Uploaded file (Cloudinary CDN URL or verified local disk file)
         if self.image:
             try:
-                if self.image.storage.exists(self.image.name):
-                    return self.image.url
+                url = self.image.url
+                if url.startswith('http') or self.image.storage.exists(self.image.name):
+                    return url
             except Exception:
                 pass
+
 
         # 3. Guaranteed High-Resolution Category Editorial Fallback
         category_defaults = {
@@ -95,10 +97,13 @@ class Profile(models.Model):
             return self.avatar_url
         if self.avatar:
             try:
-                return self.avatar.url
+                url = self.avatar.url
+                if url.startswith('http') or self.avatar.storage.exists(self.avatar.name):
+                    return url
             except Exception:
                 pass
         return f"https://ui-avatars.com/api/?name={self.user.username}&background=d4af37&color=000000&bold=true"
+
 
 
     def __str__(self):
