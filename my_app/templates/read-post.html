@@ -307,15 +307,21 @@
     const postId = {{ post.id }};
 
     // ==========================================
-    // 🎧 AI Natural Human Audio Narration (TTS)
+    // ==========================================
+    // 🎧 AI Natural Human Audio Narration (Dual Engine: Web Speech + Universal Cloud Audio)
     // ==========================================
     let synth = window.speechSynthesis;
-    let utterance = null;
     let isPlaying = false;
+    let isPaused = false;
     let availableVoices = [];
     let selectedVoice = null;
     let currentArticleLang = 'English';
-    let ttsPingTimer = null;
+    
+    // Sentence chunking & playback tracking
+    let narrationChunks = [];
+    let currentChunkIndex = 0;
+    let activeEngine = 'speechSynthesis'; // 'speechSynthesis' | 'cloudAudio'
+    let currentHtmlAudio = null;
 
     const LANG_CODE_MAP = {
         'English': { code: 'en', fallback: 'en-US' },
@@ -334,19 +340,24 @@
     };
 
     function populateVoicesForLanguage(langName) {
-        if (!synth) return;
         currentArticleLang = langName || 'English';
-        availableVoices = synth.getVoices();
         const select = document.getElementById('ttsVoiceSelect');
         const status = document.getElementById('ttsStatus');
         if (!select) return;
 
         select.innerHTML = '';
+        availableVoices = synth ? synth.getVoices() : [];
 
         const langInfo = LANG_CODE_MAP[currentArticleLang] || { code: 'en', fallback: 'en-US' };
         const langCode = langInfo.code.toLowerCase();
 
-        // Filter voices that match the active language prefix (e.g. 'es', 'fr', 'hi', 'en')
+        // 1. Add Cloud Human Voice as guaranteed option
+        const cloudOpt = document.createElement('option');
+        cloudOpt.value = 'cloud';
+        cloudOpt.innerText = `✨ Cloud Voice (${currentArticleLang})`;
+        select.appendChild(cloudOpt);
+
+        // 2. Filter local browser voices matching this language
         const matchingVoices = [];
         availableVoices.forEach((voice, index) => {
             const vLang = (voice.lang || '').toLowerCase().replace('_', '-');
@@ -356,7 +367,6 @@
             }
         });
 
-        // Priority sort: Natural / Neural voices first
         matchingVoices.sort((a, b) => (b.isNatural ? 1 : 0) - (a.isNatural ? 1 : 0));
 
         if (matchingVoices.length > 0) {
@@ -372,21 +382,20 @@
                 select.appendChild(opt);
             });
 
-            // Select the highest priority natural voice
+            // If a natural voice is available locally, prefer it
             selectedVoice = matchingVoices[0].voice;
             select.value = matchingVoices[0].index;
+            activeEngine = 'speechSynthesis';
             if (status && !isPlaying) {
-                status.innerText = `Ready in ${currentArticleLang} (${matchingVoices.length} voices)`;
+                status.innerText = `Ready in ${currentArticleLang} (${matchingVoices.length} local + Cloud voices)`;
             }
         } else {
-            // Fallback when browser has no dedicated voice package installed for this language
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.innerText = `🌐 Native Engine (${langInfo.fallback})`;
-            select.appendChild(opt);
+            // No local browser voices for this language -> default to Cloud Voice
             selectedVoice = null;
+            select.value = 'cloud';
+            activeEngine = 'cloudAudio';
             if (status && !isPlaying) {
-                status.innerText = `Ready in ${currentArticleLang} (browser engine)`;
+                status.innerText = `Ready in ${currentArticleLang} (Cloud Human Voice)`;
             }
         }
     }
@@ -400,12 +409,18 @@
 
     function changeTtsVoice() {
         const select = document.getElementById('ttsVoiceSelect');
-        const idx = select.value;
-        if (idx !== '' && availableVoices[idx]) {
-            selectedVoice = availableVoices[idx];
+        const val = select.value;
+        if (val === 'cloud') {
+            selectedVoice = null;
+            activeEngine = 'cloudAudio';
+        } else if (val !== '' && availableVoices[val]) {
+            selectedVoice = availableVoices[val];
+            activeEngine = 'speechSynthesis';
         } else {
             selectedVoice = null;
+            activeEngine = 'cloudAudio';
         }
+
         if (isPlaying) {
             stopAudioNarration();
             toggleAudioNarration();
@@ -430,136 +445,230 @@
             .trim();
     }
 
-    function toggleAudioNarration() {
-        if (!synth) {
-            showToast('Text-to-speech is not supported on this browser.', 'error');
+    // Splits text into natural sentence chunks under maxLen characters
+    function chunkTextIntoSentences(text, maxLen = 170) {
+        if (!text) return [];
+        // Match sentence terminators (., !, ?, \n, and Indian danda ।)
+        const rawSentences = text.match(/[^.!?।\n]+[.!?।\n]+|[^.!?।\n]+$/g) || [text];
+        const chunks = [];
+        let current = '';
+
+        for (let s of rawSentences) {
+            s = s.trim();
+            if (!s) continue;
+            if ((current + ' ' + s).trim().length <= maxLen) {
+                current = (current + ' ' + s).trim();
+            } else {
+                if (current) chunks.push(current);
+                if (s.length > maxLen) {
+                    // Split long sentence by comma or words
+                    const words = s.split(' ');
+                    let subChunk = '';
+                    for (const w of words) {
+                        if ((subChunk + ' ' + w).trim().length <= maxLen) {
+                            subChunk = (subChunk + ' ' + w).trim();
+                        } else {
+                            if (subChunk) chunks.push(subChunk);
+                            subChunk = w;
+                        }
+                    }
+                    current = subChunk;
+                } else {
+                    current = s;
+                }
+            }
+        }
+        if (current) chunks.push(current);
+        return chunks;
+    }
+
+    function playNextChunk() {
+        if (!isPlaying) return;
+
+        if (currentChunkIndex >= narrationChunks.length) {
+            finishAudioNarration();
             return;
         }
 
+        const chunk = narrationChunks[currentChunkIndex];
+        const total = narrationChunks.length;
+        const status = document.getElementById('ttsStatus');
+        const langInfo = LANG_CODE_MAP[currentArticleLang] || { code: 'en', fallback: 'en-US' };
+        const speedVal = parseFloat(document.getElementById('ttsSpeed').value) || 1.0;
+
+        if (status) {
+            const voiceLabel = (activeEngine === 'cloudAudio' || !selectedVoice) ? 'Cloud Human Voice' : selectedVoice.name.substring(0, 18);
+            status.innerText = `Speaking (${voiceLabel} • ${currentChunkIndex + 1}/${total})...`;
+        }
+
+        if (activeEngine === 'cloudAudio' || !selectedVoice) {
+            // Play through Google Universal Cloud TTS Audio
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(langInfo.code)}&q=${encodeURIComponent(chunk)}`;
+            if (currentHtmlAudio) {
+                currentHtmlAudio.pause();
+                currentHtmlAudio = null;
+            }
+            currentHtmlAudio = new Audio(url);
+            currentHtmlAudio.playbackRate = Math.min(1.4, Math.max(0.75, speedVal));
+
+            currentHtmlAudio.onended = () => {
+                currentChunkIndex++;
+                playNextChunk();
+            };
+
+            currentHtmlAudio.onerror = () => {
+                currentChunkIndex++;
+                playNextChunk();
+            };
+
+            currentHtmlAudio.play().catch(err => {
+                console.warn('Audio autoplay notice:', err);
+                // Advance if play was interrupted
+                currentChunkIndex++;
+                if (currentChunkIndex < narrationChunks.length) {
+                    playNextChunk();
+                } else {
+                    finishAudioNarration();
+                }
+            });
+        } else {
+            // Play through SpeechSynthesis
+            if (synth.speaking) synth.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(chunk);
+            utterance.voice = selectedVoice;
+            utterance.lang = selectedVoice.lang || langInfo.fallback;
+            utterance.rate = speedVal;
+            utterance.pitch = 1.02;
+
+            utterance.onend = () => {
+                currentChunkIndex++;
+                playNextChunk();
+            };
+
+            utterance.onerror = (e) => {
+                if (e.error === 'interrupted' || e.error === 'canceled') return;
+                // If browser SpeechSynthesis fails for this language, seamlessly fall back to Cloud Audio!
+                console.warn('SpeechSynthesis failed, switching to Cloud Audio:', e.error);
+                activeEngine = 'cloudAudio';
+                playNextChunk();
+            };
+
+            setTimeout(() => {
+                if (isPlaying && synth) synth.speak(utterance);
+            }, 30);
+        }
+    }
+
+    function toggleAudioNarration() {
         const btnLabel = document.getElementById('ttsBtnLabel');
         const status = document.getElementById('ttsStatus');
         const waveBars = document.getElementById('audioWaveBars');
         const stopBtn = document.getElementById('btnTtsStop');
 
         if (isPlaying) {
-            if (synth.speaking && !synth.paused) {
+            // Pause
+            isPlaying = false;
+            isPaused = true;
+            if (activeEngine === 'cloudAudio' && currentHtmlAudio) {
+                currentHtmlAudio.pause();
+            } else if (synth) {
                 synth.pause();
-                isPlaying = false;
-                clearInterval(ttsPingTimer);
-                if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Resume';
-                if (status) status.innerText = 'Narration paused';
-                if (waveBars) waveBars.style.display = 'none';
             }
-        } else {
-            if (synth.paused) {
+            if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Resume';
+            if (status) status.innerText = `Narration paused (${currentArticleLang})`;
+            if (waveBars) waveBars.style.display = 'none';
+        } else if (isPaused) {
+            // Resume
+            isPlaying = true;
+            isPaused = false;
+            if (activeEngine === 'cloudAudio' && currentHtmlAudio) {
+                currentHtmlAudio.play().catch(() => {});
+            } else if (synth && synth.paused) {
                 synth.resume();
-                isPlaying = true;
-                if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pause';
-                if (status) status.innerText = `Speaking (${currentArticleLang})...`;
-                if (waveBars) waveBars.style.display = 'inline-flex';
-                if (stopBtn) stopBtn.style.display = 'inline-block';
             } else {
-                synth.cancel();
-                clearInterval(ttsPingTimer);
-                
-                // Read current dynamic text from the DOM (translated or original)
-                const currentTitle = titleEl ? titleEl.innerText : "{{ post.title|escapejs }}";
-                const currentSubtitle = subtitleEl ? subtitleEl.innerText : "{{ post.subtitle|escapejs }}";
-                const currentContent = contentEl ? contentEl.innerText : '';
-
-                const cleanNarration = cleanTextForHumanSpeech(`${currentTitle}. ${currentSubtitle}. ${currentContent}`);
-                if (!cleanNarration) {
-                    showToast('No text available to narrate.', 'info');
-                    return;
-                }
-                
-                utterance = new SpeechSynthesisUtterance(cleanNarration);
-                
-                // Set appropriate voice & language code
-                const langInfo = LANG_CODE_MAP[currentArticleLang] || { code: 'en', fallback: 'en-US' };
-                if (selectedVoice) {
-                    utterance.voice = selectedVoice;
-                    utterance.lang = selectedVoice.lang;
-                } else {
-                    utterance.lang = langInfo.fallback;
-                    // Attempt to locate matching voice in availableVoices
-                    const match = availableVoices.find(v => (v.lang || '').toLowerCase().replace('_', '-').startsWith(langInfo.code));
-                    if (match) {
-                        utterance.voice = match;
-                        utterance.lang = match.lang;
-                    }
-                }
-
-                // Natural human voice parameters
-                const speedVal = parseFloat(document.getElementById('ttsSpeed').value) || 1.0;
-                utterance.rate = speedVal;
-                utterance.pitch = 1.02; // Warm conversational pitch
-
-                utterance.onstart = () => {
-                    isPlaying = true;
-                    if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pause';
-                    const voiceLabel = utterance.voice ? utterance.voice.name.substring(0, 20) : currentArticleLang;
-                    if (status) status.innerText = `Speaking (${voiceLabel})...`;
-                    if (waveBars) waveBars.style.display = 'inline-flex';
-                    if (stopBtn) stopBtn.style.display = 'inline-block';
-
-                    // Chrome 15-second speech synthesis watchdog
-                    clearInterval(ttsPingTimer);
-                    ttsPingTimer = setInterval(() => {
-                        if (synth && isPlaying && synth.speaking && !synth.paused) {
-                            synth.pause();
-                            synth.resume();
-                        }
-                    }, 10000);
-                };
-
-                utterance.onend = () => {
-                    isPlaying = false;
-                    clearInterval(ttsPingTimer);
-                    if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Listen';
-                    if (status) status.innerText = `Finished narration (${currentArticleLang})`;
-                    if (waveBars) waveBars.style.display = 'none';
-                    if (stopBtn) stopBtn.style.display = 'none';
-                };
-
-                utterance.onerror = (e) => {
-                    clearInterval(ttsPingTimer);
-                    if (e.error !== 'interrupted' && e.error !== 'canceled') {
-                        showToast('Audio notice: ' + (e.error || 'TTS notice'), 'info');
-                    }
-                    isPlaying = false;
-                    if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Listen';
-                    if (status) status.innerText = `Ready in ${currentArticleLang}`;
-                    if (waveBars) waveBars.style.display = 'none';
-                    if (stopBtn) stopBtn.style.display = 'none';
-                };
-
-                synth.speak(utterance);
+                playNextChunk();
             }
+            if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pause';
+            if (status) status.innerText = `Speaking (${currentArticleLang})...`;
+            if (waveBars) waveBars.style.display = 'inline-flex';
+            if (stopBtn) stopBtn.style.display = 'inline-block';
+        } else {
+            // Start fresh narration
+            stopAudioNarration();
+
+            const titleEl = document.getElementById('postTitleHeading');
+            const subtitleEl = document.getElementById('postSubtitleHeading');
+            const contentEl = document.getElementById('articleContentText');
+
+            const currentTitle = titleEl ? titleEl.innerText : "{{ post.title|escapejs }}";
+            const currentSubtitle = subtitleEl ? subtitleEl.innerText : "{{ post.subtitle|escapejs }}";
+            const currentContent = contentEl ? contentEl.innerText : '';
+
+            const cleanNarration = cleanTextForHumanSpeech(`${currentTitle}. ${currentSubtitle}. ${currentContent}`);
+            if (!cleanNarration) {
+                showToast('No text available to narrate.', 'info');
+                return;
+            }
+
+            narrationChunks = chunkTextIntoSentences(cleanNarration);
+            if (narrationChunks.length === 0) {
+                showToast('No sentences found to narrate.', 'info');
+                return;
+            }
+
+            currentChunkIndex = 0;
+            isPlaying = true;
+            isPaused = false;
+
+            if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pause';
+            if (waveBars) waveBars.style.display = 'inline-flex';
+            if (stopBtn) stopBtn.style.display = 'inline-block';
+
+            playNextChunk();
         }
     }
 
     function stopAudioNarration() {
-        clearInterval(ttsPingTimer);
+        isPlaying = false;
+        isPaused = false;
+        currentChunkIndex = 0;
+        narrationChunks = [];
+
+        if (currentHtmlAudio) {
+            currentHtmlAudio.pause();
+            currentHtmlAudio = null;
+        }
         if (synth) {
             synth.cancel();
         }
-        isPlaying = false;
+
         const btnLabel = document.getElementById('ttsBtnLabel');
         const status = document.getElementById('ttsStatus');
         const waveBars = document.getElementById('audioWaveBars');
         const stopBtn = document.getElementById('btnTtsStop');
 
         if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Listen';
-        if (status) status.innerText = `Narration stopped (${currentArticleLang})`;
+        if (status) status.innerText = `Ready in ${currentArticleLang}`;
         if (waveBars) waveBars.style.display = 'none';
         if (stopBtn) stopBtn.style.display = 'none';
     }
 
+    function finishAudioNarration() {
+        stopAudioNarration();
+        const status = document.getElementById('ttsStatus');
+        if (status) status.innerText = `Finished narration (${currentArticleLang})`;
+    }
+
     function updateTtsSpeed() {
         if (isPlaying) {
-            stopAudioNarration();
-            toggleAudioNarration();
+            const speedVal = parseFloat(document.getElementById('ttsSpeed').value) || 1.0;
+            if (activeEngine === 'cloudAudio' && currentHtmlAudio) {
+                currentHtmlAudio.playbackRate = Math.min(1.4, Math.max(0.75, speedVal));
+            } else {
+                if (currentChunkIndex > 0) currentChunkIndex--;
+                playNextChunk();
+            }
         }
     }
 
