@@ -314,51 +314,87 @@
     let isPlaying = false;
     let availableVoices = [];
     let selectedVoice = null;
+    let currentArticleLang = 'English';
+    let ttsPingTimer = null;
 
-    function populateVoices() {
+    const LANG_CODE_MAP = {
+        'English': { code: 'en', fallback: 'en-US' },
+        'Spanish': { code: 'es', fallback: 'es-ES' },
+        'French': { code: 'fr', fallback: 'fr-FR' },
+        'German': { code: 'de', fallback: 'de-DE' },
+        'Hindi': { code: 'hi', fallback: 'hi-IN' },
+        'Telugu': { code: 'te', fallback: 'te-IN' },
+        'Tamil': { code: 'ta', fallback: 'ta-IN' },
+        'Japanese': { code: 'ja', fallback: 'ja-JP' },
+        'Arabic': { code: 'ar', fallback: 'ar-SA' },
+        'Mandarin': { code: 'zh', fallback: 'zh-CN' },
+        'Italian': { code: 'it', fallback: 'it-IT' },
+        'Portuguese': { code: 'pt', fallback: 'pt-BR' },
+        'Russian': { code: 'ru', fallback: 'ru-RU' }
+    };
+
+    function populateVoicesForLanguage(langName) {
         if (!synth) return;
+        currentArticleLang = langName || 'English';
         availableVoices = synth.getVoices();
         const select = document.getElementById('ttsVoiceSelect');
+        const status = document.getElementById('ttsStatus');
         if (!select) return;
 
-        select.innerHTML = '<option value="">✨ Best Natural Voice (Auto)</option>';
+        select.innerHTML = '';
 
-        // Filter and sort English / Natural voices first
-        const naturalVoices = [];
-        const otherVoices = [];
+        const langInfo = LANG_CODE_MAP[currentArticleLang] || { code: 'en', fallback: 'en-US' };
+        const langCode = langInfo.code.toLowerCase();
 
+        // Filter voices that match the active language prefix (e.g. 'es', 'fr', 'hi', 'en')
+        const matchingVoices = [];
         availableVoices.forEach((voice, index) => {
-            const isNatural = /natural|neural|online|google|apple|premium|studio|jenny|guy|aria|samantha/i.test(voice.name);
-            const isEnglish = voice.lang.startsWith('en');
-
-            if (isEnglish || isNatural) {
-                naturalVoices.push({ voice, index, isNatural });
-            } else {
-                otherVoices.push({ voice, index, isNatural: false });
+            const vLang = (voice.lang || '').toLowerCase().replace('_', '-');
+            if (vLang.startsWith(langCode)) {
+                const isNatural = /natural|neural|online|google|apple|premium|studio|jenny|guy|aria|samantha/i.test(voice.name);
+                matchingVoices.push({ voice, index, isNatural });
             }
         });
 
-        // Priority sort: Natural voices first
-        naturalVoices.sort((a, b) => (b.isNatural ? 1 : 0) - (a.isNatural ? 1 : 0));
+        // Priority sort: Natural / Neural voices first
+        matchingVoices.sort((a, b) => (b.isNatural ? 1 : 0) - (a.isNatural ? 1 : 0));
 
-        naturalVoices.forEach(item => {
+        if (matchingVoices.length > 0) {
+            matchingVoices.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.index;
+                const badge = item.isNatural ? '✨ ' : '🎙️ ';
+                const cleanName = item.voice.name
+                    .replace(/Microsoft |Google |Apple /gi, '')
+                    .trim()
+                    .substring(0, 22);
+                opt.innerText = `${badge}${cleanName} (${item.voice.lang})`;
+                select.appendChild(opt);
+            });
+
+            // Select the highest priority natural voice
+            selectedVoice = matchingVoices[0].voice;
+            select.value = matchingVoices[0].index;
+            if (status && !isPlaying) {
+                status.innerText = `Ready in ${currentArticleLang} (${matchingVoices.length} voices)`;
+            }
+        } else {
+            // Fallback when browser has no dedicated voice package installed for this language
             const opt = document.createElement('option');
-            opt.value = item.index;
-            const badge = item.isNatural ? '✨ Natural: ' : '🎙️ ';
-            opt.innerText = badge + item.voice.name.replace(/Microsoft |Google |English |United States|United Kingdom/gi, '').trim().substring(0, 24);
+            opt.value = '';
+            opt.innerText = `🌐 Native Engine (${langInfo.fallback})`;
             select.appendChild(opt);
-        });
-
-        // Auto-select the top natural voice
-        if (naturalVoices.length > 0) {
-            selectedVoice = naturalVoices[0].voice;
+            selectedVoice = null;
+            if (status && !isPlaying) {
+                status.innerText = `Ready in ${currentArticleLang} (browser engine)`;
+            }
         }
     }
 
     if (synth) {
-        populateVoices();
+        populateVoicesForLanguage('English');
         if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = populateVoices;
+            speechSynthesis.onvoiceschanged = () => populateVoicesForLanguage(currentArticleLang);
         }
     }
 
@@ -385,7 +421,7 @@
             .replace(/\*(.*?)\*/gi, '$1') // italic
             .replace(/`{1,3}[\s\S]*?`{1,3}/gi, '') // code blocks
             .replace(/^\s*[-*]\s+/gim, ', ') // bullet points to natural pauses
-            .replace(/AI/g, 'A.I.')
+            .replace(/\bAI\b/g, 'A.I.')
             .replace(/\be\.g\.\b/gi, 'for example')
             .replace(/\bi\.e\.\b/gi, 'that is')
             .replace(/\bvs\b/gi, 'versus')
@@ -409,6 +445,7 @@
             if (synth.speaking && !synth.paused) {
                 synth.pause();
                 isPlaying = false;
+                clearInterval(ttsPingTimer);
                 if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Resume';
                 if (status) status.innerText = 'Narration paused';
                 if (waveBars) waveBars.style.display = 'none';
@@ -418,26 +455,39 @@
                 synth.resume();
                 isPlaying = true;
                 if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pause';
-                if (status) status.innerText = 'Speaking narration...';
+                if (status) status.innerText = `Speaking (${currentArticleLang})...`;
                 if (waveBars) waveBars.style.display = 'inline-flex';
                 if (stopBtn) stopBtn.style.display = 'inline-block';
             } else {
                 synth.cancel();
+                clearInterval(ttsPingTimer);
                 
-                const rawTitle = "{{ post.title|escapejs }}";
-                const rawSubtitle = "{{ post.subtitle|escapejs }}";
-                const rawContent = document.getElementById('articleContentText') ? document.getElementById('articleContentText').innerText : '';
+                // Read current dynamic text from the DOM (translated or original)
+                const currentTitle = titleEl ? titleEl.innerText : "{{ post.title|escapejs }}";
+                const currentSubtitle = subtitleEl ? subtitleEl.innerText : "{{ post.subtitle|escapejs }}";
+                const currentContent = contentEl ? contentEl.innerText : '';
 
-                const cleanNarration = cleanTextForHumanSpeech(`${rawTitle}. ${rawSubtitle}. ${rawContent}`);
+                const cleanNarration = cleanTextForHumanSpeech(`${currentTitle}. ${currentSubtitle}. ${currentContent}`);
+                if (!cleanNarration) {
+                    showToast('No text available to narrate.', 'info');
+                    return;
+                }
                 
                 utterance = new SpeechSynthesisUtterance(cleanNarration);
                 
-                // Set voice
+                // Set appropriate voice & language code
+                const langInfo = LANG_CODE_MAP[currentArticleLang] || { code: 'en', fallback: 'en-US' };
                 if (selectedVoice) {
                     utterance.voice = selectedVoice;
-                } else if (availableVoices.length > 0) {
-                    const natural = availableVoices.find(v => /natural|neural|online|google|apple|jenny|guy/i.test(v.name) && v.lang.startsWith('en'));
-                    if (natural) utterance.voice = natural;
+                    utterance.lang = selectedVoice.lang;
+                } else {
+                    utterance.lang = langInfo.fallback;
+                    // Attempt to locate matching voice in availableVoices
+                    const match = availableVoices.find(v => (v.lang || '').toLowerCase().replace('_', '-').startsWith(langInfo.code));
+                    if (match) {
+                        utterance.voice = match;
+                        utterance.lang = match.lang;
+                    }
                 }
 
                 // Natural human voice parameters
@@ -448,25 +498,38 @@
                 utterance.onstart = () => {
                     isPlaying = true;
                     if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pause';
-                    if (status) status.innerText = `Speaking (${utterance.voice ? utterance.voice.name.substring(0, 20) : 'Natural Voice'})...`;
+                    const voiceLabel = utterance.voice ? utterance.voice.name.substring(0, 20) : currentArticleLang;
+                    if (status) status.innerText = `Speaking (${voiceLabel})...`;
                     if (waveBars) waveBars.style.display = 'inline-flex';
                     if (stopBtn) stopBtn.style.display = 'inline-block';
+
+                    // Chrome 15-second speech synthesis watchdog
+                    clearInterval(ttsPingTimer);
+                    ttsPingTimer = setInterval(() => {
+                        if (synth && isPlaying && synth.speaking && !synth.paused) {
+                            synth.pause();
+                            synth.resume();
+                        }
+                    }, 10000);
                 };
 
                 utterance.onend = () => {
                     isPlaying = false;
+                    clearInterval(ttsPingTimer);
                     if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Listen';
-                    if (status) status.innerText = 'Finished narration';
+                    if (status) status.innerText = `Finished narration (${currentArticleLang})`;
                     if (waveBars) waveBars.style.display = 'none';
                     if (stopBtn) stopBtn.style.display = 'none';
                 };
 
                 utterance.onerror = (e) => {
+                    clearInterval(ttsPingTimer);
                     if (e.error !== 'interrupted' && e.error !== 'canceled') {
-                        showToast('Audio notice: ' + e.error, 'info');
+                        showToast('Audio notice: ' + (e.error || 'TTS notice'), 'info');
                     }
                     isPlaying = false;
                     if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Listen';
+                    if (status) status.innerText = `Ready in ${currentArticleLang}`;
                     if (waveBars) waveBars.style.display = 'none';
                     if (stopBtn) stopBtn.style.display = 'none';
                 };
@@ -477,6 +540,7 @@
     }
 
     function stopAudioNarration() {
+        clearInterval(ttsPingTimer);
         if (synth) {
             synth.cancel();
         }
@@ -487,7 +551,7 @@
         const stopBtn = document.getElementById('btnTtsStop');
 
         if (btnLabel) btnLabel.innerHTML = '<i class="bi bi-play-fill me-1"></i> Listen';
-        if (status) status.innerText = 'Narration stopped';
+        if (status) status.innerText = `Narration stopped (${currentArticleLang})`;
         if (waveBars) waveBars.style.display = 'none';
         if (stopBtn) stopBtn.style.display = 'none';
     }
@@ -498,6 +562,7 @@
             toggleAudioNarration();
         }
     }
+
 
 
     // ==========================================
@@ -733,7 +798,10 @@
                     contentEl.innerHTML = renderMarkdownToHtml(t.content);
                 }
                 if (resetBtn) resetBtn.style.display = 'inline-block';
-                showToast(`✨ Article successfully translated into ${lang}!`, 'success');
+                // Update speech narration to target language voices and text
+                stopAudioNarration();
+                populateVoicesForLanguage(lang);
+                showToast(`✨ Article successfully translated into ${lang}! Narration updated.`, 'success');
             } else {
                 showToast('Translation error: ' + (data.error || 'Could not translate'), 'error');
             }
@@ -750,7 +818,9 @@
         if (contentEl) contentEl.innerHTML = originalContentHtml;
         if (selectLang) selectLang.value = '';
         if (resetBtn) resetBtn.style.display = 'none';
-        showToast('Restored original English article', 'info');
+        stopAudioNarration();
+        populateVoicesForLanguage('English');
+        showToast('Restored original English article and narration', 'info');
     }
 
     // ==========================================
