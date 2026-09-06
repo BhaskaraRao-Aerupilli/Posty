@@ -35,19 +35,41 @@ ALLOWED_HOSTS = [
 ]
 
 
-# Application definition
+# Detect and sanitize Cloudinary environment
+_raw_cloudinary_url = os.environ.get('CLOUDINARY_URL', '').strip()
+if _raw_cloudinary_url and not _raw_cloudinary_url.startswith('cloudinary://'):
+    os.environ.pop('CLOUDINARY_URL', None)
+    _raw_cloudinary_url = ''
 
+_cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '').strip()
+_api_key = os.environ.get('CLOUDINARY_API_KEY', '').strip()
+_api_secret = os.environ.get('CLOUDINARY_API_SECRET', '').strip()
+
+HAS_CLOUDINARY = bool(_raw_cloudinary_url or (_cloud_name and _api_key and _api_secret))
+
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'cloudinary_storage',
+]
+
+if HAS_CLOUDINARY:
+    INSTALLED_APPS += ['cloudinary_storage']
+
+INSTALLED_APPS += [
     'django.contrib.staticfiles',
-    'cloudinary',
+]
+
+if HAS_CLOUDINARY:
+    INSTALLED_APPS += ['cloudinary']
+
+INSTALLED_APPS += [
     'my_app',
 ]
+
 
 
 MIDDLEWARE = [
@@ -145,18 +167,16 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Cloudinary Media Storage (Permanent Cloud Media Storage for Uploads)
-CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', '').strip()
-CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY', '').strip()
-CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET', '').strip()
-CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL', '').strip()
-
-if (CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET) or CLOUDINARY_URL:
-    CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
-        'API_KEY': CLOUDINARY_API_KEY,
-        'API_SECRET': CLOUDINARY_API_SECRET,
-    }
+if HAS_CLOUDINARY:
+    CLOUDINARY_STORAGE = {}
+    if _cloud_name and _api_key and _api_secret:
+        CLOUDINARY_STORAGE = {
+            'CLOUD_NAME': _cloud_name,
+            'API_KEY': _api_key,
+            'API_SECRET': _api_secret,
+        }
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
