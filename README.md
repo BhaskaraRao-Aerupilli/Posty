@@ -3,10 +3,12 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-5.0+-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Cloudinary](https://img.shields.io/badge/Cloudinary-Media%20Storage-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white)](https://cloudinary.com/)
 [![Groq](https://img.shields.io/badge/Groq-LPU%20Inference-F05032?style=for-the-badge&logo=fastapi&logoColor=white)](https://groq.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-> **Posty** is a full-stack, luxury-editorial publishing platform designed for modern creators and readers. Built with **Django** and **PostgreSQL**, it pairs high-end typography and responsive UI themes (*Oasis Light* & *Obsidian Dark*) with a state-of-the-art **AI Editorial Suite** powered by **Groq LLMs** (1.2s real-time translation across 12+ languages, assistive writing tools, contextual Q&A chatbot, and neural voice audio narration).
+> **Posty** is a full-stack, luxury-editorial publishing platform designed for modern creators and readers. Built with **Django**, **PostgreSQL**, and **Cloudinary**, it pairs high-end typography and responsive UI themes (*Oasis Light* & *Obsidian Dark*) with a state-of-the-art **AI Editorial Suite** powered by **Groq LLMs** (1.2s real-time translation across 12+ languages, assistive writing tools, contextual Q&A chatbot, and neural voice audio narration).
+
 
 ---
 
@@ -61,7 +63,8 @@ graph TD
 
     subgraph DataLayer ["Data & Persistence Layer"]
         DB[(Persistent PostgreSQL / SQLite Fallback)]
-        MediaStorage["Media & Image Storage (Hotlink-Protected URLs)"]
+        Cloudinary["Cloudinary CDN (Permanent Media Storage)"]
+        MediaStorage["Direct Web CDN / Resilient Fallbacks"]
     end
 
     subgraph ExternalServices ["External Cloud Services"]
@@ -76,6 +79,7 @@ graph TD
     Views --> AIService
     Views --> ImageService
     Views --> DB
+    Views --> Cloudinary
     Views --> MediaStorage
     AIService --> GroqAPI
     ImageService --> WikiAPI
@@ -85,7 +89,9 @@ graph TD
 
 ### Architectural Highlights:
 * **Hybrid Database Support**: Dynamically binds to managed PostgreSQL via `dj-database-url` in production while seamlessly using SQLite for offline local development.
-* **Resilient Media Serving**: Direct CDN URL prioritization with fallback validation (`storage.exists`) and browser `onerror` recovery ensures images never break or render blank boxes.
+* **Permanent Cloud Media Storage**: Integrated with **Cloudinary** (`django-cloudinary-storage`) so images uploaded from any computer persist forever across cloud container redeployments and sleep cycles.
+* **Resilient Media Serving**: Direct CDN URL prioritization with local fallback validation (`storage.exists`) and browser `onerror` recovery ensures images never break or render blank boxes.
+
 * **Sub-Second LLM Parsing**: Uses active high-throughput models (`openai/gpt-oss-20b`, `qwen/qwen3.8-27b`, `groq/compound-mini`) with multi-layer JSON stripping to eliminate gateway timeouts.
 
 ---
@@ -153,6 +159,8 @@ Posty/
 | `gunicorn` | `>=21.2.0` | Production WSGI HTTP server |
 | `whitenoise` | `>=6.5.0` | Compressed static file serving |
 | `Pillow` | `>=10.0.0` | Image processing & avatar uploads |
+| `cloudinary` | `>=1.36.0` | Cloudinary Python SDK for cloud storage |
+| `django-cloudinary-storage` | `>=0.3.0` | Permanent media storage backend for Django |
 | `psycopg2-binary` | `>=2.9.9` | PostgreSQL database adapter |
 | `dj-database-url` | `>=2.1.0` | Environment-based database configuration |
 | `groq` | `>=0.9.0` | High-speed LLM inference |
@@ -195,6 +203,9 @@ DJANGO_SECRET_KEY=your-random-django-secret-key
 DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 GROQ_API_KEY=your_groq_api_key_here
+
+# Optional: Permanent Cloudinary uploads
+CLOUDINARY_URL=cloudinary://your_key:your_secret@your_cloud_name
 ```
 *(Get a free Groq API key from [console.groq.com](https://console.groq.com/keys)).*
 
@@ -232,7 +243,9 @@ Posty includes out-of-the-box support for **Render** via `render.yaml` and `buil
      * `DJANGO_ALLOWED_HOSTS` = `*`
      * `DATABASE_URL` = *(Paste the Internal Database URL from Step 2)*
      * `GROQ_API_KEY` = *(Your Groq API key)*
-4. Click **Deploy Web Service**. Render will automatically run migrations, collect static assets, and deploy Posty live with persistent data!
+     * `CLOUDINARY_URL` = *(Your `cloudinary://...` URL for permanent computer uploads)*
+4. Click **Deploy Web Service**. Render will automatically run migrations, collect static assets, and deploy Posty live with persistent data and cloud media!
+
 
 ---
 
