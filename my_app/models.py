@@ -32,7 +32,7 @@ class Post(models.Model):
 
     @property
     def get_image_url(self):
-        # 1. Direct Web/AI image URL
+        # 1. Direct Web/AI/Cloudinary image URL
         if self.image_url and self.image_url.strip():
             return self.image_url.strip()
 
@@ -40,11 +40,13 @@ class Post(models.Model):
         if self.image:
             try:
                 url = self.image.url
-                if url.startswith('http') or self.image.storage.exists(self.image.name):
-                    return url
+                if url:
+                    if url.startswith('http'):
+                        return url
+                    if hasattr(self.image, 'storage') and self.image.storage.exists(self.image.name):
+                        return url
             except Exception:
                 pass
-
 
         # 3. Guaranteed High-Resolution Category Editorial Fallback
         category_defaults = {
@@ -56,8 +58,6 @@ class Post(models.Model):
             'General': 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80',
         }
         return category_defaults.get(self.category, 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80')
-
-
 
 
     @property
@@ -93,13 +93,16 @@ class Profile(models.Model):
 
     @property
     def get_avatar(self):
-        if self.avatar_url:
-            return self.avatar_url
+        if self.avatar_url and self.avatar_url.strip():
+            return self.avatar_url.strip()
         if self.avatar:
             try:
                 url = self.avatar.url
-                if url.startswith('http') or self.avatar.storage.exists(self.avatar.name):
-                    return url
+                if url:
+                    if url.startswith('http'):
+                        return url
+                    if hasattr(self.avatar, 'storage') and self.avatar.storage.exists(self.avatar.name):
+                        return url
             except Exception:
                 pass
         return f"https://ui-avatars.com/api/?name={self.user.username}&background=d4af37&color=000000&bold=true"

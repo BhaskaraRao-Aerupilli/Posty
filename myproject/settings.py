@@ -45,6 +45,16 @@ _cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', '').strip()
 _api_key = os.environ.get('CLOUDINARY_API_KEY', '').strip()
 _api_secret = os.environ.get('CLOUDINARY_API_SECRET', '').strip()
 
+if _raw_cloudinary_url:
+    try:
+        import urllib.parse
+        _parsed = urllib.parse.urlparse(_raw_cloudinary_url)
+        _api_key = _parsed.username or _api_key
+        _api_secret = _parsed.password or _api_secret
+        _cloud_name = _parsed.hostname or _cloud_name
+    except Exception:
+        pass
+
 HAS_CLOUDINARY = bool(_raw_cloudinary_url or (_cloud_name and _api_key and _api_secret))
 
 # Application definition
@@ -161,21 +171,25 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Cloudinary Media Storage (Permanent Cloud Media Storage for Uploads)
-if HAS_CLOUDINARY:
-    CLOUDINARY_STORAGE = {}
-    if _cloud_name and _api_key and _api_secret:
-        CLOUDINARY_STORAGE = {
-            'CLOUD_NAME': _cloud_name,
-            'API_KEY': _api_key,
-            'API_SECRET': _api_secret,
-        }
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': _cloud_name,
+    'API_KEY': _api_key,
+    'API_SECRET': _api_secret,
+}
+
+# Modern Django 5.x Storage Configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if HAS_CLOUDINARY else "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 
 # Default primary key field type

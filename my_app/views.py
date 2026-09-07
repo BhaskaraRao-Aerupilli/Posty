@@ -172,6 +172,14 @@ def add_post(request):
             if request.FILES.get('image'):
                 post.image_url = ''
             post.save()
+            if post.image:
+                try:
+                    img_url = post.image.url
+                    if img_url and img_url.startswith('http'):
+                        post.image_url = img_url
+                        post.save(update_fields=['image_url'])
+                except Exception:
+                    pass
             return redirect('display-post')
         else:
             return render(request, 'add-post.html', {'form': form})
@@ -193,6 +201,14 @@ def update_post(request, id):
             if request.FILES.get('image'):
                 post.image_url = ''
             post.save()
+            if post.image:
+                try:
+                    img_url = post.image.url
+                    if img_url and img_url.startswith('http'):
+                        post.image_url = img_url
+                        post.save(update_fields=['image_url'])
+                except Exception:
+                    pass
             return redirect('display-post')
         else:
             return render(request, 'update-post.html', {'form': form, 'post': post})
@@ -413,6 +429,14 @@ def edit_profile_view(request):
                 # User set/generated a new avatar_url
                 p.avatar = None
             p.save()
+            if p.avatar:
+                try:
+                    av_url = p.avatar.url
+                    if av_url and av_url.startswith('http'):
+                        p.avatar_url = av_url
+                        p.save(update_fields=['avatar_url'])
+                except Exception:
+                    pass
             return redirect('author-profile', username=request.user.username)
     else:
         form = ProfileForm(instance=profile)
