@@ -180,7 +180,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <span class="ai-badge"><i class="bi bi-stars me-1"></i> Posty AI Insight</span>
-                    <h5 class="mb-0" style="font-family: 'Cinzel', serif; color: var(--gold);">Executive Summary & Takeaways</h5>
+                    <h5 class="mb-0" style="color: var(--gold); font-weight: 700; letter-spacing: -0.02em;">Executive Summary & Takeaways</h5>
                 </div>
                 <button type="button" id="btnSummarize" class="ai-btn" onclick="fetchSummary()">
                     <span id="summarizeBtnText"><i class="bi bi-lightning-charge-fill me-1"></i> Generate AI Summary</span>
@@ -201,7 +201,7 @@
                     </div>
                 </div>
 
-                <h6 style="color: var(--gold); font-family: 'Cinzel', serif;"><i class="bi bi-check2-all me-1"></i> Key Takeaways:</h6>
+                <h6 style="color: var(--gold); font-weight: 700; letter-spacing: -0.015em;"><i class="bi bi-check2-all me-1"></i> Key Takeaways:</h6>
                 <ul id="takeawaysList" style="padding-left: 20px; color: var(--sand); line-height: 1.7;"></ul>
             </div>
         </div>
@@ -210,7 +210,7 @@
         <div class="ai-card mb-4">
             <div class="d-flex align-items-center gap-2 mb-3">
                 <span class="ai-badge"><i class="bi bi-chat-left-dots me-1"></i> Ask Posty AI</span>
-                <h5 class="mb-0" style="font-family: 'Cinzel', serif; color: var(--gold);">Reader Q&A Assistant</h5>
+                <h5 class="mb-0" style="color: var(--gold); font-weight: 700; letter-spacing: -0.02em;">Reader Q&A Assistant</h5>
             </div>
             <p style="font-size: 0.9rem; color: var(--desert); margin-bottom: 12px;">Have questions about this article? Ask the AI assistant below:</p>
             
@@ -244,7 +244,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="d-flex align-items-center gap-2">
                     <span class="ai-badge"><i class="bi bi-chat-quote-fill me-1"></i> Discussion</span>
-                    <h5 class="mb-0" style="font-family: 'Cinzel', serif; color: var(--gold);">Comments ({{ post.total_comments }})</h5>
+                    <h5 class="mb-0" style="color: var(--gold); font-weight: 700; letter-spacing: -0.02em;">Comments ({{ post.total_comments }})</h5>
                 </div>
             </div>
 
@@ -901,9 +901,9 @@
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/^### (.*$)/gim, '<h4 style="color: var(--gold); margin-top: 25px; margin-bottom: 10px; font-family: \'Cinzel\', serif;">$1</h4>')
-            .replace(/^## (.*$)/gim, '<h3 style="color: var(--gold); margin-top: 25px; margin-bottom: 12px; font-family: \'Cinzel\', serif;">$1</h3>')
-            .replace(/^# (.*$)/gim, '<h2 style="color: var(--gold); margin-top: 30px; margin-bottom: 15px; font-family: \'Cinzel\', serif;">$1</h2>')
+            .replace(/^### (.*$)/gim, '<h4 style="color: var(--gold); margin-top: 25px; margin-bottom: 10px; font-weight: 700; letter-spacing: -0.02em;">$1</h4>')
+            .replace(/^## (.*$)/gim, '<h3 style="color: var(--gold); margin-top: 25px; margin-bottom: 12px; font-weight: 700; letter-spacing: -0.025em;">$1</h3>')
+            .replace(/^# (.*$)/gim, '<h2 style="color: var(--gold); margin-top: 30px; margin-bottom: 15px; font-weight: 800; letter-spacing: -0.03em;">$1</h2>')
             .replace(/^\> (.*$)/gim, '<blockquote style="border-left: 3px solid var(--gold); padding-left: 15px; margin: 15px 0; color: var(--sand); font-style: italic;">$1</blockquote>')
             .replace(/\*\*(.*?)\*\*/g, '<strong style="color: var(--gold);">$1</strong>')
             .replace(/\*(.*?)\*/g, '<em style="color: var(--turquoise);">$1</em>')
@@ -967,7 +967,7 @@
     // 🔤 Font Size & Family Controls
     // ==========================================
     let currentFontSize = 1.1;
-    let isSerif = true;
+    let isSerif = false;
 
     function changeFontSize(delta) {
         currentFontSize = Math.max(0.85, Math.min(1.6, currentFontSize + (delta * 0.1)));
@@ -976,9 +976,12 @@
 
     function toggleFontFamily() {
         isSerif = !isSerif;
-        const font = isSerif ? "'Marcellus', serif" : "system-ui, -apple-system, sans-serif";
-        if (contentEl) contentEl.style.fontFamily = font;
-        showToast(`Font switched to ${isSerif ? 'Serif' : 'Sans-Serif'}`, 'info');
+        const font = isSerif ? "'Lora', Georgia, 'Times New Roman', serif" : "var(--font-sans)";
+        if (contentEl) {
+            contentEl.style.fontFamily = font;
+            contentEl.style.lineHeight = isSerif ? "1.9" : "1.85";
+        }
+        showToast(`Font switched to ${isSerif ? 'Editorial Serif (Lora)' : 'Modern Sans (Plus Jakarta Sans)'}`, 'info');
     }
     </script>
 {% endblock content %}
