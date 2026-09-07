@@ -21,7 +21,7 @@
                 </div>
                 <h3 class="card-title mt-2">{{ post.title }}</h3>
                 <p style="color: var(--turquoise); font-style: italic; font-size: 0.98rem;">{{ post.subtitle }}</p>
-                <p class="card-text">{{ post.content | truncatewords:30 }}</p>
+                <p class="card-text">{{ post.clean_snippet | truncatewords:30 }}</p>
 
                 <div class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top: 1px dashed rgba(212,175,55,0.25);">
                     <div class="d-flex align-items-center gap-3" style="font-size: 0.85rem; color: var(--desert);">

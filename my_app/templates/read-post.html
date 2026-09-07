@@ -430,18 +430,41 @@
     function cleanTextForHumanSpeech(text) {
         if (!text) return '';
         return text
-            .replace(/https?:\/\/\S+/gi, '') // remove URLs
-            .replace(/#+\s*(.*?)\n/gi, '$1. ') // headings to full sentences
-            .replace(/\*\*(.*?)\*\*/gi, '$1') // bold
-            .replace(/\*(.*?)\*/gi, '$1') // italic
-            .replace(/`{1,3}[\s\S]*?`{1,3}/gi, '') // code blocks
-            .replace(/^\s*[-*]\s+/gim, ', ') // bullet points to natural pauses
+            // Strip URLs and markdown links [text](url) -> text
+            .replace(/https?:\/\/\S+/gi, '')
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+            // Code blocks
+            .replace(/`{1,3}[\s\S]*?`{1,3}/gi, '')
+            // Convert headings (#, ##, ###) into clean natural sentences
+            .replace(/^#+\s*(.*?)$/gim, '$1. ')
+            .replace(/#+\s*/g, '')
+            // Strip bold and italic markdown asterisks
+            .replace(/\*\*\*(.*?)\*\*\*/g, '$1')
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/\*(.*?)\*/g, '$1')
+            .replace(/_{1,3}(.*?)_{1,3}/g, '$1')
+            // Bullet points to natural pauses
+            .replace(/^\s*[-*•+]\s+/gim, ', ')
+            .replace(/[-*•+]\s+/g, ', ')
+            // Blockquotes and dividers
+            .replace(/^\s*>\s*/gim, '')
+            .replace(/---+|===+/g, ' ')
+            // Common spoken abbreviations
             .replace(/\bAI\b/g, 'A.I.')
             .replace(/\be\.g\.\b/gi, 'for example')
             .replace(/\bi\.e\.\b/gi, 'that is')
             .replace(/\bvs\b/gi, 'versus')
-            .replace(/\n\s*\n/g, '. ') // paragraph pauses
+            .replace(/\betc\.\b/gi, 'etcetera')
+            // ABSOLUTE PURGE of any remaining #, *, _, ~, `, >, |
+            .replace(/[#*_~`>|]/g, '')
+            // Paragraph pauses and whitespace normalization
+            .replace(/\n\s*\n/g, '. ')
+            .replace(/\n+/g, '. ')
             .replace(/\s+/g, ' ')
+            // Clean up duplicate periods and punctuation collisions
+            .replace(/\s*([,.;:!?])\s*/g, '$1 ')
+            .replace(/([,;])\s*\./g, '.')
+            .replace(/\.{2,}/g, '.')
             .trim();
     }
 
@@ -889,6 +912,14 @@
             .replace(/\n/g, '<br>');
 
         return `<p style="margin-bottom: 18px; line-height: 1.85;">${html}</p>`;
+    }
+
+    // Automatically convert any raw AI markdown (# or *) on initial load into clean styled HTML
+    if (contentEl) {
+        const rawInitial = contentEl.innerText;
+        if (rawInitial && (rawInitial.includes('#') || rawInitial.includes('*') || rawInitial.includes('- '))) {
+            contentEl.innerHTML = renderMarkdownToHtml(rawInitial);
+        }
     }
 
     async function translateArticle(lang) {

@@ -27,7 +27,7 @@
                 
                 <h3 class="card-title mt-2">{{ post.title|default:"(Untitled Draft)" }}</h3>
                 <p style="color: var(--turquoise); font-style: italic; font-size: 0.95rem;">{{ post.subtitle|default:"No subtitle added yet" }}</p>
-                <p class="card-text">{{ post.content | truncatewords:25 }}</p>
+                <p class="card-text">{{ post.clean_snippet | truncatewords:25 }}</p>
 
                 <div class="d-flex gap-2 justify-content-end mt-3 pt-3" style="border-top: 1px dashed rgba(212,175,55,0.25);">
                     <a href="{% url 'read-post' post.id %}" class="btn" style="border: 1px solid var(--turquoise); color: var(--turquoise); font-size: 0.88rem;">

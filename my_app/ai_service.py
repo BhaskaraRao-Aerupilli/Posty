@@ -141,19 +141,19 @@ def _fallback_generate_post(topic: str, tone: str = "Engaging") -> dict:
 
 In recent years, {cleaned.lower()} has transformed how creators, developers, and thinkers share ideas and solve real-world challenges. Whether you are a beginner exploring the fundamentals or an experienced practitioner looking for fresh perspectives, understanding the core dynamics of {cleaned.lower()} is essential.
 
-### 1. Understanding the Core Principles
+1. Understanding the Core Principles
 To truly master {cleaned.lower()}, one must appreciate its foundational pillars:
-- Clarity of purpose and consistent execution.
-- Leveraging modern tools to maximize impact and reach.
-- Staying adaptable as trends and technologies evolve.
+• Clarity of purpose and consistent execution.
+• Leveraging modern tools to maximize impact and reach.
+• Staying adaptable as trends and technologies evolve.
 
-### 2. Practical Strategies for Success
+2. Practical Strategies for Success
 When applying these concepts, focus on actionable workflows:
 1. Start with structured goals and measurable milestones.
 2. Foster collaborative discussions and gather continuous feedback.
 3. Iterate rapidly based on empirical results rather than assumptions.
 
-### 3. Looking Ahead
+3. Looking Ahead
 The horizon for {cleaned.lower()} is bright with possibilities. Embracing continuous learning and intentional experimentation will ensure enduring success in an increasingly interconnected world.
 
 What are your thoughts on {cleaned.lower()}? Let us know in the discussion!"""
@@ -182,10 +182,10 @@ def _fallback_enhance(content: str, action: str) -> str:
                 polished.append(line_str)
             else:
                 polished.append("")
-        return "\n".join(polished) + "\n\n*(Polished for refined tone and improved clarity)*"
+        return "\n".join(polished) + "\n\n(Polished for refined tone and improved clarity)"
 
     elif action == "expand":
-        return content.strip() + "\n\n### Key Analysis & Detailed Considerations\nBuilding upon the points outlined above, practical implementations demonstrate that consistent application and data-driven insights significantly enhance overall outcomes. Integrating feedback loops ensures continuous refinement and long-term sustainability."
+        return content.strip() + "\n\nKey Analysis & Detailed Considerations:\nBuilding upon the points outlined above, practical implementations demonstrate that consistent application and data-driven insights significantly enhance overall outcomes. Integrating feedback loops ensures continuous refinement and long-term sustainability."
 
     elif action == "shorten" or action == "summarize":
         sentences = re.split(r'(?<=[.!?])\s+', content.strip())
@@ -211,7 +211,7 @@ def _fallback_summarize(title: str, content: str) -> dict:
     p3 = sentences[2] if len(sentences) > 2 else "Concludes with strategic forward-looking takeaways to inspire continued growth and engagement."
 
     return {
-        "summary": f"**{title}** presents a detailed overview examining core foundations, strategic execution patterns, and practical recommendations.",
+        "summary": f"{title} presents a detailed overview examining core foundations, strategic execution patterns, and practical recommendations.",
         "key_takeaways": [
             p1,
             p2,
@@ -253,9 +253,9 @@ Tone: {tone}
 
 Respond ONLY with a JSON object with this exact structure:
 {{
-    "title": "A captivating, punchy title",
-    "subtitle": "An intriguing, descriptive subtitle",
-    "content": "Rich markdown content with paragraphs, subheadings (###), and bullet points"
+    "title": "A captivating, punchy title (clean text, no hashtags or asterisks)",
+    "subtitle": "An intriguing, descriptive subtitle (clean text, no asterisks)",
+    "content": "Rich, polished blog post content formatted with clean paragraphs and section headers. Write clearly and naturally without cluttering the text with hash symbols (#) or asterisks (*)."
 }}
 Do not include markdown code block backticks around the JSON."""
 

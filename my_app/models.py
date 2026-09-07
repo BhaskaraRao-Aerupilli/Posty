@@ -59,6 +59,21 @@ class Post(models.Model):
         }
         return category_defaults.get(self.category, 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80')
 
+    @property
+    def clean_snippet(self):
+        """Clean plain text without raw markdown symbols (#, *) for card snippets and previews."""
+        import re
+        text = self.content or ""
+        # Remove headings (#, ##, ###)
+        text = re.sub(r'#+\s*', '', text)
+        # Remove bold and italic asterisks
+        text = re.sub(r'\*{1,3}', '', text)
+        # Remove markdown link formatting [text](url) -> text
+        text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+        # Remove bullet markers
+        text = re.sub(r'^\s*[-*•+]\s+', '', text, flags=re.MULTILINE)
+        # Normalize whitespace
+        return ' '.join(text.split())
 
     @property
     def total_likes(self):
